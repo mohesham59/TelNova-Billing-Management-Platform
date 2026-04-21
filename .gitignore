@@ -1,0 +1,6 @@
+/TeleMeter/target/
+*.class
+*.war
+*.jar
+.netbeans/
+nbproject/private/

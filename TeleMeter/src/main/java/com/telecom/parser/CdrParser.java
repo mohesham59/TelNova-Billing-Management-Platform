@@ -161,7 +161,17 @@ public class CdrParser {
         // Example mapping (adjust based on your model)  => complete the object
         record.setCallerMsisdn(parts[0]);   //dial_a
         record.setReceiverMsisdn(parts[1]);          // dial_b
-        record.setServiceId(Integer.parseInt(parts[2]));
+        
+        int serviceCode = Integer.parseInt(parts[2]);
+        String serviceType;
+        switch (serviceCode) {
+            case 1: serviceType = "voice"; break;
+            case 2: serviceType = "sms"; break;
+            case 3: serviceType = "data"; break;
+            default: serviceType = "voice";
+        }
+        
+        record.setServiceType(serviceType);
         record.setDuration(Integer.parseInt(parts[3]));
         
         // Time parsing (optional depending on model)  parts[4] = "12:30:00" => LocalTime = 12:30
@@ -179,7 +189,7 @@ public class CdrParser {
     try {
         // SQL query to insert a new CDR record into the database
         String sql = "INSERT INTO cdr " +
-                     "(file_id, caller_id, receiver_id, start_time, duration, service_id, external_charges, rated_flag) " +
+                     "(file_id, caller_id, receiver_id, start_time, duration, service_type, external_charges, rated_flag) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         // Prepare the statement to prevent SQL injection and improve performance
@@ -189,8 +199,7 @@ public class CdrParser {
         ps.setString(3, record.getReceiverMsisdn());
         ps.setTimestamp(4, java.sql.Timestamp.valueOf(record.getStartTime()));
         ps.setLong(5, record.getDuration());
-        ps.setInt(6, record.getServiceId());
-        ps.setDouble(7, record.getExternalCharges());
+        ps.setObject(6, record.getServiceType(), java.sql.Types.OTHER);        ps.setDouble(7, record.getExternalCharges());
         ps.setBoolean(8, false);
         
         // Execute the insert operation

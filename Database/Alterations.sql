@@ -20,5 +20,3 @@ ADD COLUMN subtotal NUMERIC(12,2) NOT NULL DEFAULT 0;
 -- Add total amount (after tax)
 ALTER TABLE bill
 ADD COLUMN total_amount NUMERIC(12,2) NOT NULL DEFAULT 0;
-
-

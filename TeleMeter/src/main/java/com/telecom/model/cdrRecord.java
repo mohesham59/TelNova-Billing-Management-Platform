@@ -15,7 +15,7 @@ public class cdrRecord {
     private String receiverMsisdn;  //dial_b
     private LocalDateTime startTime;
     private long duration;  //seconds / messages / bytes 
-    private int serviceId;  //1=voice , 2=sms , 3=data
+    private String serviceType;  // 'voice', 'sms', 'data'
     private double externalCharges;  
     
 //-----------------------------------------------------
@@ -76,13 +76,13 @@ public class cdrRecord {
         this.duration = duration; 
     }
 //-----------------------------------------------------
-    public int getServiceId() 
+    public String getServiceType() 
     { 
-        return serviceId; 
+        return serviceType; 
     }
-    public void setServiceId(int serviceId) 
+    public void setServiceType(String serviceType) 
     { 
-        this.serviceId = serviceId; 
+        this.serviceType = serviceType; 
     }
 //-----------------------------------------------------
     public double getExternalCharges() 

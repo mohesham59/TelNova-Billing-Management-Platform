@@ -12,6 +12,7 @@ CREATE TABLE contract_one_time (
     fee_id          INTEGER REFERENCES One_time_fee(id)
 );
 
+
 -- Add subtotal (before tax)
 ALTER TABLE bill
 ADD COLUMN subtotal NUMERIC(12,2) NOT NULL DEFAULT 0;

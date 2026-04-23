@@ -1,5 +1,5 @@
 -- ============================================================
--- TELECOM RATING SYSTEM
+-- FUNCTION: rate_cdrs()
 -- ============================================================
 -- Flow per CDR:
 --   a) Verify contract is active
@@ -21,15 +21,15 @@ DROP FUNCTION IF EXISTS rate_cdrs();
 
 CREATE OR REPLACE FUNCTION rate_cdrs()
 RETURNS TABLE (
-    cdr_id          INTEGER,
-    caller          VARCHAR,
-    service         service_type,
-    duration        INTEGER,
-    bundle_used     NUMERIC,
-    extra_usage     NUMERIC,
-    cost            NUMERIC,
-    credit_before   NUMERIC,
-    credit_after    NUMERIC
+    cdr_id        INTEGER,   
+    caller        VARCHAR,   
+    service       service_type,
+    duration      INTEGER,  
+    bundle_used   NUMERIC,  
+    extra_usage   NUMERIC,   
+    cost          NUMERIC,   
+    credit_before NUMERIC,   
+    credit_after  NUMERIC   
 ) AS $func$
 DECLARE
     rec             RECORD;
@@ -48,9 +48,9 @@ BEGIN
     -- ==========================================================
     FOR rec IN
         SELECT
-            cdr.*,
-            ct.id               AS contract_id,
-            ct.available_credit,
+            c.*,                        -- all CDR columns (c.id, c.caller_id, c.service_type, c.duration …)
+            ct.id               AS contract_id,      -- contract PK (separate alias to avoid clash with c.id)
+            ct.available_credit AS available_credit,  -- starting credit snapshot from the join
             ct.rateplan_id,
             rp.ror_voice,
             rp.ror_sms,
@@ -148,8 +148,8 @@ BEGIN
         -- --------------------------------------------------
         IF v_cost > 0 THEN
             UPDATE contract
-            SET available_credit = available_credit - v_cost
-            WHERE id = rec.contract_id;
+            SET    available_credit = available_credit - v_cost
+            WHERE  id = rec.contract_id;
         END IF;
 
         -- --------------------------------------------------

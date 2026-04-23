@@ -21,4 +21,34 @@ ADD COLUMN subtotal NUMERIC(12,2) NOT NULL DEFAULT 0;
 ALTER TABLE bill
 ADD COLUMN total_amount NUMERIC(12,2) NOT NULL DEFAULT 0;
 
-ALTER TABLE cdr ADD COLUMN rated_cost NUMERIC(12,2) NOT NULL DEFAULT 0;
+
+-- -------------------------------------------------
+--  contract_consumption — remove redundant columns
+--  kol row bta3 service Id wa7da f elconsumption bta3 
+--  elservice hwa elconsumption column no need for other 3.
+-- -------------------------------------------------
+ALTER TABLE contract_consumption DROP COLUMN IF EXISTS data;
+ALTER TABLE contract_consumption DROP COLUMN IF EXISTS minutes;
+ALTER TABLE contract_consumption DROP COLUMN IF EXISTS sms;
+
+-- -------------------------------------------------
+-- add dates to contract
+-- -------------------------------------------------
+ALTER TABLE contract ADD COLUMN IF NOT EXISTS activation_date   DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE contract ADD COLUMN IF NOT EXISTS billing_cycle_day INTEGER NOT NULL DEFAULT 1;
+
+-- -------------------------------------------------
+-- recreate contract_one_time with proper structure
+-- connect it to the bill table and a flag
+-- -------------------------------------------------
+DROP TABLE IF EXISTS contract_one_time;
+
+CREATE TABLE contract_one_time (
+    id              SERIAL PRIMARY KEY,
+    contract_id     INTEGER NOT NULL REFERENCES contract(id),
+    fee_id          INTEGER NOT NULL REFERENCES one_time_fee(id),
+    applied_date    DATE NOT NULL DEFAULT CURRENT_DATE,
+    bill_id         INTEGER REFERENCES bill(id),
+    billed_flag     BOOLEAN NOT NULL DEFAULT FALSE
+);
+

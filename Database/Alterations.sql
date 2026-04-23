@@ -52,3 +52,6 @@ CREATE TABLE contract_one_time (
     billed_flag     BOOLEAN NOT NULL DEFAULT FALSE
 );
 
+ALTER TABLE bill ADD COLUMN IF NOT EXISTS period_start DATE;
+ALTER TABLE bill ADD COLUMN IF NOT EXISTS period_end   DATE;
+

@@ -1,14 +1,21 @@
 -- ============================================================
--- TELECOM RATING SYSTEM
+-- TELECOM RATING SYSTEM (FINAL)
 -- ============================================================
 -- Flow per CDR:
 --   a) Verify contract is active
 --   b) Determine ROR (voice / sms / data) from rateplan
 --   c) Calculate effective usage:
+<<<<<<< HEAD
 --      - Voice on-net -> 1 unit/min
 --      - Voice off-net -> 5 units/min
 --      - SMS  -> 1 unit per message
 --      - Data -> 1 unit per MB (parser converts KB→MB)
+=======
+--      - Voice on-net (receiver starts with 013) → 1 unit/min
+--      - Voice cross-net (receiver other network) → 5 units/min
+--      - SMS → 1 unit per message
+--      - Data → 1 unit per MB (parser converts KB→MB)
+>>>>>>> feature/rating
 --   d) Find ALL remaining bundles for that service type
 --      in the current billing cycle, ordered by priority:
 --        Priority 1 (Free Units)   → consumed FIRST
@@ -17,11 +24,15 @@
 --      and charge remainder at ROR
 --   f) Cap total cost at available_credit
 --   g) Deduct from contract credit
+<<<<<<< HEAD
 --   h) Track ROR usage in ror_contract (upsert)
+=======
+--   h) Track ROR usage in ror_contract
+--      ROR tracks units paid for (capped), not raw usage
+>>>>>>> feature/rating
 --   i) Mark CDR rated, store cost in rated_cost
 --   j) Flag orphan CDRs with no matching contract
 -- ============================================================
-
 DROP FUNCTION IF EXISTS rate_cdrs();
 
 CREATE OR REPLACE FUNCTION rate_cdrs()
@@ -55,7 +66,11 @@ DECLARE
     v_unit_multiplier NUMERIC;
 BEGIN
     -- ==========================================================
+<<<<<<< HEAD
     --  Rate all CDRs that have matching active contracts
+=======
+    --  Rate all CDRs with matching active contracts
+>>>>>>> feature/rating
     -- ==========================================================
     FOR rec IN
         SELECT
@@ -86,6 +101,7 @@ BEGIN
         END IF;
 
         -- --------------------------------------------------
+<<<<<<< HEAD
         -- B: Calculate effective usage based on
         --    on-net vs off-net for voice calls
         -- --------------------------------------------------
@@ -116,6 +132,39 @@ BEGIN
 
         -- --------------------------------------------------
         -- D: Loop through ALL packages by priority
+=======
+        -- B: Calculate effective usage
+        -- --------------------------------------------------
+        IF rec.service_type = 'voice' THEN
+            IF LEFT(rec.receiver_id, LENGTH(v_company_prefix)) = v_company_prefix THEN
+                v_unit_multiplier := 1;
+                v_call_type       := 'on-net';
+            ELSE
+                v_unit_multiplier := 5;
+                v_call_type       := 'cross-net';
+            END IF;
+            v_effective_usage := rec.duration * v_unit_multiplier;
+        ELSIF rec.service_type = 'sms' THEN
+            v_effective_usage := rec.duration;
+            v_call_type       := 'sms';
+        ELSE
+            v_effective_usage := rec.duration;
+            v_call_type       := 'data';
+        END IF;
+
+        -- --------------------------------------------------
+        -- C: Re-read current credit and initialize counters
+        -- --------------------------------------------------
+        SELECT available_credit INTO v_credit_before
+        FROM contract WHERE id = rec.contract_id;
+
+        v_cost          := 0;
+        v_bundle_used   := 0;
+        v_extra         := v_effective_usage;
+
+        -- --------------------------------------------------
+        -- D: Loop through packages by priority
+>>>>>>> feature/rating
         -- --------------------------------------------------
         FOR pkg IN
             SELECT
@@ -157,19 +206,22 @@ BEGIN
 
             v_bundle_used := v_bundle_used + v_deduct;
             v_extra       := v_extra - v_deduct;
-
         END LOOP;
 
         -- --------------------------------------------------
+<<<<<<< HEAD
         -- E: Charge ROR on any remaining extra usage
+=======
+        -- E: Charge ROR on remaining extra usage
+>>>>>>> feature/rating
         -- --------------------------------------------------
         v_cost := v_extra * v_ror;
 
         -- --------------------------------------------------
         -- F: Cap cost at available credit
         -- --------------------------------------------------
-        IF v_cost > rec.available_credit THEN
-            v_cost := rec.available_credit;
+        IF v_cost > v_credit_before THEN
+            v_cost := v_credit_before;
         END IF;
 
         -- --------------------------------------------------
@@ -226,12 +278,17 @@ BEGIN
         credit_after    := v_credit_before - v_cost;
         call_type       := v_call_type;
         RETURN NEXT;
-
     END LOOP;
 
+<<<<<<< HEAD
     -- ----------------------------------------------------------
     -- J: Flag orphan CDRs
     -- ----------------------------------------------------------
+=======
+    -- ---------------------------------------------------
+    -- J: Flag orphan CDRs
+    -- --------------------------------------------------
+>>>>>>> feature/rating
     UPDATE cdr
     SET rating_error = CASE
         WHEN NOT EXISTS (
@@ -253,6 +310,5 @@ BEGIN
           WHERE msisdn = cdr.caller_id
             AND status = 'active'
       );
-
 END;
 $func$ LANGUAGE plpgsql;

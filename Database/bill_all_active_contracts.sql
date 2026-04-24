@@ -21,7 +21,7 @@ BEGIN
     LOOP
         v_bill_id := generate_bill(rec.id, p_billing_date);
 
-        -- Skip if duplicate bill was detected (returns NULL)
+        -- Skip if duplicate bill detected (returns NULL)
         IF v_bill_id IS NULL THEN
             CONTINUE;
         END IF;

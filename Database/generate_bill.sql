@@ -12,8 +12,6 @@ DECLARE
     v_period_end       DATE;
     v_contract_msisdn  VARCHAR(20);
     v_rateplan_id      INTEGER;
-    v_credit_limit     NUMERIC(12,2);
-    v_available_credit NUMERIC(12,2);
     v_voice_usage      INTEGER;
     v_data_usage       INTEGER;
     v_sms_usage        INTEGER;
@@ -25,11 +23,12 @@ DECLARE
     v_total_amount     NUMERIC(12,2);
     v_tax_rate         CONSTANT NUMERIC := 0.10;
 BEGIN
-    -- ── Billing period: the month BEFORE the billing date ──
+    -- ── Billing period = the month BEFORE billing_date ──
+    -- If billing_date = 2026-06-01, period = May 1 → June 1
     v_period_start := DATE_TRUNC('month', p_billing_date - INTERVAL '1 month')::DATE;
     v_period_end   := DATE_TRUNC('month', p_billing_date)::DATE;
 
-    -- ── Duplicate bill check ──
+    -- ── Duplicate bill protection ──
     IF EXISTS (
         SELECT 1 FROM bill
         WHERE  contract_id  = p_contract_id
@@ -42,8 +41,8 @@ BEGIN
     END IF;
 
     -- ── Fetch contract details ──
-    SELECT msisdn, rateplan_id, credit_limit, available_credit
-    INTO   v_contract_msisdn, v_rateplan_id, v_credit_limit, v_available_credit
+    SELECT msisdn, rateplan_id
+    INTO   v_contract_msisdn, v_rateplan_id
     FROM   contract
     WHERE  id = p_contract_id;
 
@@ -51,7 +50,7 @@ BEGIN
         RAISE EXCEPTION 'Contract id % not found', p_contract_id;
     END IF;
 
-    -- ── Actual usage cost: sum of all rated CDR costs in the period ──
+    -- ── Usage cost: sum rated_cost from CDRs in the period ──
     SELECT COALESCE(SUM(c.rated_cost), 0)
     INTO   v_usage_cost
     FROM   cdr c
@@ -75,13 +74,13 @@ BEGIN
       AND  c.start_time >= v_period_start::TIMESTAMP
       AND  c.start_time <  v_period_end::TIMESTAMP;
 
-    -- ── Monthly recurring fee from the rateplan ──
+    -- ── Monthly recurring fee from rateplan ──
     SELECT COALESCE(rp.monthly_fee, 0)
     INTO   v_recurring_fee
     FROM   rateplan rp
     WHERE  rp.id = v_rateplan_id;
 
-    -- ── Sum unbilled one-time fees applied during this period ──
+    -- ── One-time fees applied DURING this billing period only ──
     SELECT COALESCE(SUM(otf.price), 0)
     INTO   v_one_time_fees
     FROM   contract_one_time cot
@@ -100,6 +99,7 @@ BEGIN
     INSERT INTO bill (
         contract_id, billing_date,
         period_start, period_end,
+        usage_cost,
         recurring_fees, one_time_fees,
         voice_usage, data_usage, sms_usage,
         taxes, subtotal, total_amount
@@ -107,13 +107,14 @@ BEGIN
     VALUES (
         p_contract_id, p_billing_date,
         v_period_start, v_period_end,
+        v_usage_cost,
         v_recurring_fee, v_one_time_fees,
         v_voice_usage, v_data_usage, v_sms_usage,
         v_taxes, v_subtotal, v_total_amount
     )
     RETURNING id INTO v_bill_id;
 
-    -- ── Mark one-time fees as billed ──
+    -- ── Mark one-time fees as billed (only this period) ──
     UPDATE contract_one_time
     SET    billed_flag = TRUE,
            bill_id     = v_bill_id
@@ -128,7 +129,7 @@ BEGIN
     WHERE  contract_id = p_contract_id
       AND  bill_id IS NULL;
 
-    -- ── Insert invoice record (PDF generated later) ──
+    -- ── Insert invoice record (PDF path filled later by Java) ──
     INSERT INTO invoice (bill_id, month)
     VALUES (v_bill_id, NOW());
 

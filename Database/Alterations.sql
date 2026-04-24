@@ -55,3 +55,4 @@ CREATE TABLE contract_one_time (
 ALTER TABLE bill ADD COLUMN IF NOT EXISTS period_start DATE;
 ALTER TABLE bill ADD COLUMN IF NOT EXISTS period_end   DATE;
 
+ALTER TABLE cdr ADD COLUMN IF NOT EXISTS rating_error  TEXT;

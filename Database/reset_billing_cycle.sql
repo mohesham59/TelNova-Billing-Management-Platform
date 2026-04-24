@@ -1,7 +1,7 @@
 -- ============================================================
 -- FUNCTION: Reset billing cycle
 -- ============================================================
--- Called at the start of each new billing period (monthly).
+-- Called at the start of each new billing period.
 -- Should be called AFTER bill generation captures the data.
 --
 -- For every active contract:
@@ -96,9 +96,9 @@ BEGIN
         -- ── Restore available_credit to credit_limit for all active contracts ──
 -- Must run AFTER generate_bill() has already read available_credit
 -- to calculate usage_cost. If it runs before, usage_cost = 0 always.
-UPDATE contract
-SET    available_credit = credit_limit
-WHERE  status = 'active';
+    UPDATE contract
+    SET    available_credit = credit_limit
+    WHERE  status = 'active';
     );
 
     -- --------------------------------------------------
@@ -116,4 +116,4 @@ WHERE  status = 'active';
 
 END;
 $$
- LANGUAGE plpgsql;
+LANGUAGE plpgsql;

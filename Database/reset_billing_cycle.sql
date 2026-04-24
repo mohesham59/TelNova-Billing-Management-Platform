@@ -92,6 +92,13 @@ BEGIN
         sms   = 0
     WHERE contract_id IN (
         SELECT id FROM contract WHERE status = 'active'
+
+        -- ── Restore available_credit to credit_limit for all active contracts ──
+-- Must run AFTER generate_bill() has already read available_credit
+-- to calculate usage_cost. If it runs before, usage_cost = 0 always.
+UPDATE contract
+SET    available_credit = credit_limit
+WHERE  status = 'active';
     );
 
     -- --------------------------------------------------

@@ -9,7 +9,6 @@
 -- Priority convention:
 --   Priority 1 = Free Units  (consumed first)
 --   Priority 2 = Bundles     (consumed second)
---   Priority N = ...         (consumed in order)
 -- ============================================================
 
 DROP TRIGGER IF EXISTS trg_initialize_contract ON contract;

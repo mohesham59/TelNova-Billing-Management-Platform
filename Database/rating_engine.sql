@@ -42,6 +42,7 @@ DECLARE
     v_credit_before NUMERIC;
     v_ror_units     INTEGER;
     v_deduct        NUMERIC;
+    v_billing_units NUMERIC;  -- duration converted to billing units (minutes / MB / count)
 BEGIN
     -- ==========================================================
     -- PHASE 1: Rate all CDRs that have matching active contracts
@@ -75,11 +76,26 @@ BEGIN
         END IF;
 
         -- --------------------------------------------------
+        -- Step A2: Convert raw duration to billing units
+        --   Voice: seconds → minutes (CEIL, e.g. 140s = 3 min)
+        --   SMS:   message count (no conversion needed)
+        --   Data:  bytes/KB → MB (CEIL for partial MB)
+        --   Bundles are defined in these same units
+        -- --------------------------------------------------
+        IF rec.service_type = 'voice' THEN
+            v_billing_units := CEIL(rec.duration / 60.0);
+        ELSIF rec.service_type = 'sms' THEN
+            v_billing_units := rec.duration;
+        ELSE
+            v_billing_units := CEIL(rec.duration);
+        END IF;
+
+        -- --------------------------------------------------
         -- Step B: Initialize counters
         -- --------------------------------------------------
         v_cost          := 0;
         v_bundle_used   := 0;
-        v_extra         := rec.duration;
+        v_extra         := v_billing_units;   -- use converted billing units instead of raw duration
         v_credit_before := rec.available_credit;
 
         -- --------------------------------------------------

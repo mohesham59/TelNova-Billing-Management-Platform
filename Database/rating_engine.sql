@@ -1,26 +1,30 @@
 -- ============================================================
--- TELECOM RATING SYSTEM (FINAL)
+-- FUNCTION: rate_cdrs()
 -- ============================================================
 -- Flow per CDR:
 --   a) Verify contract is active
 --   b) Determine ROR (voice / sms / data) from rateplan
---   c) Calculate effective usage:
---      - Voice on-net -> 1 unit/min
---      - Voice off-net -> 5 units/min
---      - SMS  -> 1 unit per message
---      - Data -> 1 unit per MB (parser converts KB→MB)
---   d) Find ALL remaining bundles for that service type
+--   c) Convert raw duration to billing units:
+--      - Voice: seconds → CEIL to minutes (e.g. 140s = 3 min)
+--      - SMS:   message count (no conversion)
+--      - Data:  CEIL to MB
+--   d) Calculate effective usage with on-net/cross-net:
+--      - Voice on-net  → 1 unit per minute
+--      - Voice cross-net → 5 units per minute
+--      - SMS/Data → same as billing units
+--   e) Find ALL remaining bundles for that service type
 --      in the current billing cycle, ordered by priority:
 --        Priority 1 (Free Units)   → consumed FIRST
 --        Priority 2 (Bundles)      → consumed SECOND
---   e) Deduct from packages in priority order
---      and charge remainder at ROR
---   f) Cap total cost at available_credit
---   g) Deduct from contract credit
---   h) Track ROR usage in ror_contract (upsert)
---   i) Mark CDR rated, store cost in rated_cost
---   j) Flag orphan CDRs with no matching contract
+--   f) Deduct from packages in priority order
+--      → charge remainder at ROR
+--   g) Cap total cost at available_credit
+--   h) Deduct from contract credit
+--   i) Track ROR usage in ror_contract
+--   j) Mark CDR rated, store cost in rated_cost
+--   k) Flag orphan CDRs with no matching contract
 -- ============================================================
+
 DROP FUNCTION IF EXISTS rate_cdrs();
 
 CREATE OR REPLACE FUNCTION rate_cdrs()
@@ -48,13 +52,14 @@ DECLARE
     v_credit_before   NUMERIC;
     v_ror_units       INTEGER;
     v_deduct          NUMERIC;
-    v_effective_usage NUMERIC;
+    v_billing_units   NUMERIC;   -- duration converted to billing units (minutes / MB / count)
+    v_effective_usage NUMERIC;   -- billing units × on-net/cross-net multiplier
     v_call_type       TEXT;
     v_company_prefix  VARCHAR := '013';
     v_unit_multiplier NUMERIC;
 BEGIN
     -- ==========================================================
-    --  Rate all CDRs with matching active contracts
+    -- PHASE 1: Rate all CDRs that have matching active contracts
     -- ==========================================================
     FOR rec IN
         SELECT
@@ -74,7 +79,7 @@ BEGIN
         ORDER  BY cdr.start_time
     LOOP
         -- --------------------------------------------------
-        -- A: Determine ROR for this service type
+        -- Step A: Determine the ROR for this service type
         -- --------------------------------------------------
         IF rec.service_type = 'voice' THEN
             v_ror := COALESCE(rec.ror_voice, 0);
@@ -85,7 +90,25 @@ BEGIN
         END IF;
 
         -- --------------------------------------------------
-        -- B: Calculate effective usage
+        -- Step A2: Convert raw duration to billing units
+        --   Voice: seconds → minutes (CEIL, e.g. 140s = 3 min)
+        --   SMS:   message count (no conversion needed)
+        --   Data:  CEIL to MB (for partial MB)
+        --   Bundles are defined in these same units
+        -- --------------------------------------------------
+        IF rec.service_type = 'voice' THEN
+            v_billing_units := CEIL(rec.duration / 60.0);
+        ELSIF rec.service_type = 'sms' THEN
+            v_billing_units := rec.duration;
+        ELSE
+            v_billing_units := CEIL(rec.duration);
+        END IF;
+
+        -- --------------------------------------------------
+        -- Step B: Calculate effective usage (on-net / cross-net)
+        --   Voice on-net (same company prefix): 1 unit/min
+        --   Voice cross-net (other operator):   5 units/min
+        --   SMS / Data: no multiplier
         -- --------------------------------------------------
         IF rec.service_type = 'voice' THEN
             IF LEFT(rec.receiver_id, LENGTH(v_company_prefix)) = v_company_prefix THEN
@@ -95,27 +118,25 @@ BEGIN
                 v_unit_multiplier := 5;
                 v_call_type       := 'cross-net';
             END IF;
-            v_effective_usage := rec.duration * v_unit_multiplier;
+            v_effective_usage := v_billing_units * v_unit_multiplier;
         ELSIF rec.service_type = 'sms' THEN
-            v_effective_usage := rec.duration;
+            v_effective_usage := v_billing_units;
             v_call_type       := 'sms';
         ELSE
-            v_effective_usage := rec.duration;
+            v_effective_usage := v_billing_units;
             v_call_type       := 'data';
         END IF;
 
         -- --------------------------------------------------
-        -- C: Re-read current credit and initialize counters
+        -- Step C: Initialize counters
         -- --------------------------------------------------
-        SELECT available_credit INTO v_credit_before
-        FROM contract WHERE id = rec.contract_id;
-
         v_cost          := 0;
         v_bundle_used   := 0;
         v_extra         := v_effective_usage;
+        v_credit_before := rec.available_credit;
 
         -- --------------------------------------------------
-        -- D: Loop through packages by priority
+        -- Step D: Loop through ALL packages by priority
         -- --------------------------------------------------
         FOR pkg IN
             SELECT
@@ -135,6 +156,7 @@ BEGIN
               AND cont_cons.starting_date = date_trunc('month', rec.start_time)::DATE
             ORDER BY sp.priority ASC, sp.id ASC
         LOOP
+            -- Exit early if all usage is covered
             IF v_extra <= 0 THEN
                 EXIT;
             END IF;
@@ -145,34 +167,37 @@ BEGIN
                 CONTINUE;
             END IF;
 
+            -- Calculate how much to deduct from this package
             IF v_extra <= v_remaining THEN
                 v_deduct := v_extra;
             ELSE
                 v_deduct := v_remaining;
             END IF;
 
+            -- Update consumption (single column tracks total)
             UPDATE contract_consumption
             SET consumption = consumption + v_deduct
             WHERE id = pkg.cc_id;
 
             v_bundle_used := v_bundle_used + v_deduct;
             v_extra       := v_extra - v_deduct;
+
         END LOOP;
 
         -- --------------------------------------------------
-        -- E: Charge ROR on remaining extra usage
+        -- Step E: Charge ROR on any remaining extra usage
         -- --------------------------------------------------
         v_cost := v_extra * v_ror;
 
         -- --------------------------------------------------
-        -- F: Cap cost at available credit
+        -- Step F: Cap cost at available credit
         -- --------------------------------------------------
         IF v_cost > v_credit_before THEN
             v_cost := v_credit_before;
         END IF;
 
         -- --------------------------------------------------
-        -- G: Deduct cost from contract credit
+        -- Step G: Deduct cost from contract credit
         -- --------------------------------------------------
         IF v_cost > 0 THEN
             UPDATE contract
@@ -181,7 +206,7 @@ BEGIN
         END IF;
 
         -- --------------------------------------------------
-        -- H: Track ROR usage
+        -- Step H: Track ROR usage via upsert
         -- --------------------------------------------------
         IF v_cost > 0 AND v_ror > 0 THEN
             v_ror_units := CEIL(v_cost / v_ror)::INTEGER;
@@ -202,7 +227,7 @@ BEGIN
         END IF;
 
         -- --------------------------------------------------
-        -- I: Mark CDR as rated
+        -- Step I: Mark CDR as rated
         -- --------------------------------------------------
         UPDATE cdr
         SET rated_flag   = TRUE,
@@ -211,7 +236,7 @@ BEGIN
         WHERE id = rec.id;
 
         -- --------------------------------------------------
-        -- Return result row
+        -- Step J: Return result row
         -- --------------------------------------------------
         cdr_id          := rec.id;
         caller          := rec.caller_id;
@@ -225,11 +250,12 @@ BEGIN
         credit_after    := v_credit_before - v_cost;
         call_type       := v_call_type;
         RETURN NEXT;
+
     END LOOP;
 
-    -- ---------------------------------------------------
-    -- J: Flag orphan CDRs
-    -- --------------------------------------------------
+    -- ==========================================================
+    -- PHASE 2: Flag orphan CDRs (no matching active contract)
+    -- ==========================================================
     UPDATE cdr
     SET rating_error = CASE
         WHEN NOT EXISTS (
@@ -251,5 +277,6 @@ BEGIN
           WHERE msisdn = cdr.caller_id
             AND status = 'active'
       );
+
 END;
 $func$ LANGUAGE plpgsql;

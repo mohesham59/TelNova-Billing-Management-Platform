@@ -17,6 +17,14 @@
     </properties>
     <dependencies>
         
+        <!-- Add inside <dependencies> -->
+<dependency>
+    <groupId>com.itextpdf</groupId>
+    <artifactId>itext7-core</artifactId>
+    <version>7.2.5</version>
+    <type>pom</type>
+</dependency>
+        
         <!-- Servlet API for Tomcat 9 -->
         <dependency>
             <groupId>javax.servlet</groupId>

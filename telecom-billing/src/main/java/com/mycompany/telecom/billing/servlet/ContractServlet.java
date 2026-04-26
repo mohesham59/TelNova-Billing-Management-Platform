@@ -25,25 +25,36 @@ import java.math.BigDecimal;
 @WebServlet("/contracts/*")
 public class ContractServlet extends HttpServlet {
 
-    private final ContractDAO    contractDAO = new ContractDAO();
-    private final UserDAO        userDAO     = new UserDAO();
-    private final RatePlanDAO    planDAO     = new RatePlanDAO();
+    private final ContractDAO contractDAO = new ContractDAO();
+    private final UserDAO userDAO = new UserDAO();
+    private final RatePlanDAO planDAO = new RatePlanDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
         String path = req.getPathInfo();
         try {
-            if (path == null || path.equals("/"))   { renderList(req, resp); }
-            else if (path.equals("/new"))           { renderForm(req, resp, new Contract(), false); }
-            else if (path.startsWith("/edit/"))     { int id = Integer.parseInt(path.substring(6));
-                                                       Contract ct = contractDAO.findById(id);
-                                                       if (ct == null) { resp.sendError(404); return; }
-                                                       renderForm(req, resp, ct, true); }
-            else if (path.startsWith("/delete/"))   { contractDAO.delete(Integer.parseInt(path.substring(8)));
-                                                       resp.sendRedirect(req.getContextPath() + "/contracts/?success=deleted"); }
-            else resp.sendError(404);
-        } catch (Exception e) { throw new ServletException(e); }
+            if (path == null || path.equals("/")) {
+                renderList(req, resp);
+            } else if (path.equals("/new")) {
+                renderForm(req, resp, new Contract(), false);
+            } else if (path.startsWith("/edit/")) {
+                int id = Integer.parseInt(path.substring(6));
+                Contract ct = contractDAO.findById(id);
+                if (ct == null) {
+                    resp.sendError(404);
+                    return;
+                }
+                renderForm(req, resp, ct, true);
+            } else if (path.startsWith("/delete/")) {
+                contractDAO.delete(Integer.parseInt(path.substring(8)));
+                resp.sendRedirect(req.getContextPath() + "/contracts/?success=deleted");
+            } else {
+                resp.sendError(404);
+            }
+        } catch (Exception e) {
+            throw new ServletException(e);
+        }
     }
 
     @Override
@@ -63,13 +74,16 @@ public class ContractServlet extends HttpServlet {
             String bcd = req.getParameter("billingCycleDay");
             ct.setBillingCycleDay((bcd != null && !bcd.isBlank()) ? Integer.parseInt(bcd) : 1);
 
-            if ("/new".equals(path)) contractDAO.insert(ct);
-            else if (path != null && path.startsWith("/edit/")) {
+            if ("/new".equals(path)) {
+                contractDAO.insert(ct);
+            } else if (path != null && path.startsWith("/edit/")) {
                 ct.setId(Integer.parseInt(path.substring(6)));
                 contractDAO.update(ct);
             }
             resp.sendRedirect(req.getContextPath() + "/contracts/?success=saved");
-        } catch (Exception e) { throw new ServletException(e); }
+        } catch (Exception e) {
+            throw new ServletException(e);
+        }
     }
 
     // ── LIST ─────────────────────────────────────────────────────────────────
@@ -103,11 +117,16 @@ public class ContractServlet extends HttpServlet {
                 """);
             for (Contract ct : contracts) {
                 String statusBadge = switch (ct.getStatus()) {
-                    case "active"    -> "<span class='badge badge-active'>● Active</span>";
-                    case "suspended" -> "<span class='badge badge-suspended'>⏸ Suspended</span>";
-                    case "de-active" -> "<span class='badge badge-deactive'>✕ De-active</span>";
-                    case "on-hold"   -> "<span class='badge badge-onhold'>⏳ On-Hold</span>";
-                    default          -> HtmlLayout.e(ct.getStatus());
+                    case "active" ->
+                        "<span class='badge badge-active'>● Active</span>";
+                    case "suspended" ->
+                        "<span class='badge badge-suspended'>⏸ Suspended</span>";
+                    case "de-active" ->
+                        "<span class='badge badge-deactive'>✕ De-active</span>";
+                    case "on-hold" ->
+                        "<span class='badge badge-onhold'>⏳ On-Hold</span>";
+                    default ->
+                        HtmlLayout.e(ct.getStatus());
                 };
                 out.printf("""
                     <tr>
@@ -129,14 +148,14 @@ public class ContractServlet extends HttpServlet {
                       </td>
                     </tr>
                     """,
-                    ct.getId(),
-                    HtmlLayout.e(ct.getUserName()), HtmlLayout.e(ct.getUserId()),
-                    HtmlLayout.e(ct.getMsisdn()),
-                    HtmlLayout.e(ct.getPlanName()),
-                    statusBadge,
-                    ct.getCreditLimit(),
-                    ct.getActivationDate(),
-                    ctx, ct.getId(), ctx, ct.getId());
+                        ct.getId(),
+                        HtmlLayout.e(ct.getUserName()), HtmlLayout.e(ct.getUserId()),
+                        HtmlLayout.e(ct.getMsisdn()),
+                        HtmlLayout.e(ct.getPlanName()),
+                        statusBadge,
+                        ct.getCreditLimit(),
+                        ct.getActivationDate(),
+                        ctx, ct.getId(), ctx, ct.getId());
             }
             out.print("</tbody></table>");
         }
@@ -147,18 +166,18 @@ public class ContractServlet extends HttpServlet {
     // ── FORM ─────────────────────────────────────────────────────────────────
     private void renderForm(HttpServletRequest req, HttpServletResponse resp, Contract ct, boolean editing)
             throws Exception {
-        String ctx    = req.getContextPath();
+        String ctx = req.getContextPath();
         String action = editing ? ctx + "/contracts/edit/" + ct.getId() : ctx + "/contracts/new";
-        String title  = editing ? "Edit Contract" : "New Contract";
-        List<User>     users = userDAO.findAll();
+        String title = editing ? "Edit Contract" : "New Contract";
+        List<User> users = userDAO.findAll();
         List<RatePlan> plans = planDAO.findAll();
         resp.setContentType("text/html;charset=UTF-8");
         PrintWriter out = resp.getWriter();
         out.print(HtmlLayout.header(title, "contracts", ctx));
         out.print(HtmlLayout.breadcrumb(
-            "Dashboard", ctx + "/dashboard",
-            "Contracts", ctx + "/contracts/",
-            title, null));
+                "Dashboard", ctx + "/dashboard",
+                "Contracts", ctx + "/contracts/",
+                title, null));
 
         out.printf("""
             <div class='card' style='max-width:860px;'>
@@ -174,7 +193,7 @@ public class ContractServlet extends HttpServlet {
         for (User u : users) {
             String sel = u.getId().equals(ct.getUserId()) ? " selected" : "";
             out.printf("<option value='%s'%s>%s (%s)</option>",
-                HtmlLayout.e(u.getId()), sel, HtmlLayout.e(u.getName()), HtmlLayout.e(u.getId()));
+                    HtmlLayout.e(u.getId()), sel, HtmlLayout.e(u.getName()), HtmlLayout.e(u.getId()));
         }
         out.print("</select></div>");
 
@@ -226,12 +245,12 @@ public class ContractServlet extends HttpServlet {
               </div>
             </div>
             """,
-            HtmlLayout.e(ct.getMsisdn()),
-            ct.getCreditLimit() != null    ? ct.getCreditLimit()    : "0",
-            ct.getAvailableCredit() != null ? ct.getAvailableCredit(): "0",
-            ct.getActivationDate() != null  ? ct.getActivationDate() : LocalDate.now(),
-            ct.getBillingCycleDay() > 0     ? ct.getBillingCycleDay(): 1,
-            ctx);
+                HtmlLayout.e(ct.getMsisdn()),
+                ct.getCreditLimit() != null ? ct.getCreditLimit() : "0",
+                ct.getAvailableCredit() != null ? ct.getAvailableCredit() : "0",
+                ct.getActivationDate() != null ? ct.getActivationDate() : LocalDate.now(),
+                ct.getBillingCycleDay() > 0 ? ct.getBillingCycleDay() : 1,
+                ctx);
 
         out.print(HtmlLayout.footer());
     }
@@ -241,7 +260,9 @@ public class ContractServlet extends HttpServlet {
     }
 
     private String capitalize(String s) {
-        if (s == null || s.isEmpty()) return s;
+        if (s == null || s.isEmpty()) {
+            return s;
+        }
         return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 }

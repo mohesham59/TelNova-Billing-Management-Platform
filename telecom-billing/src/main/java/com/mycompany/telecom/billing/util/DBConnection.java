@@ -7,6 +7,7 @@ package com.mycompany.telecom.billing.util;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+
 /**
  *
  * @author Ali
@@ -14,12 +15,12 @@ import java.sql.SQLException;
 public class DBConnection {
 
     // Neon — all options (ssl, channelBinding) must live in the URL itself
-    private static final String URL =
-        "jdbc:postgresql://ep-lucky-recipe-albakvk0-pooler.c-3.eu-central-1.aws.neon.tech/neondb" +
-        "?user=neondb_owner" +
-        "&password=npg_9bCGRsVIoLF1" +
-        "&sslmode=require" +
-        "&channelBinding=require";
+    private static final String URL
+            = "jdbc:postgresql://ep-lucky-recipe-albakvk0-pooler.c-3.eu-central-1.aws.neon.tech/neondb"
+            + "?user=neondb_owner"
+            + "&password=npg_9bCGRsVIoLF1"
+            + "&sslmode=require"
+            + "&channelBinding=require";
 
     static {
         try {

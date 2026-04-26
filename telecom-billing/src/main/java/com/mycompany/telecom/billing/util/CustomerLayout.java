@@ -306,8 +306,9 @@ public class CustomerLayout {
                 </div>
             """);
 
-        if (error != null)
+        if (error != null) {
             sb.append("<div class='alert-err'>⚠️ ").append(e(error)).append("</div>");
+        }
 
         sb.append("""
               <form method='post'>
@@ -340,13 +341,13 @@ public class CustomerLayout {
             """).append(CSS).append("</style></head><body>");
 
         sb.append("<div class='topbar'>")
-          .append("<div class='topbar-brand'><div class='brand-icon'>📡</div>TelecomBill</div>")
-          .append("<div class='topbar-right'>")
-          .append("<span style='color:var(--text);font-weight:500;'>").append(e(userName)).append("</span>")
-          .append("<span class='msisdn-tag'>📱 ").append(e(msisdn)).append("</span>")
-          .append("<a href='").append(contextPath).append("/portal/logout' class='logout-link'>Sign Out</a>")
-          .append("</div></div>")
-          .append("<div class='page'>");
+                .append("<div class='topbar-brand'><div class='brand-icon'>📡</div>TelecomBill</div>")
+                .append("<div class='topbar-right'>")
+                .append("<span style='color:var(--text);font-weight:500;'>").append(e(userName)).append("</span>")
+                .append("<span class='msisdn-tag'>📱 ").append(e(msisdn)).append("</span>")
+                .append("<a href='").append(contextPath).append("/portal/logout' class='logout-link'>Sign Out</a>")
+                .append("</div></div>")
+                .append("<div class='page'>");
 
         return sb.toString();
     }
@@ -369,20 +370,29 @@ public class CustomerLayout {
 
     // ── Helpers ──────────────────────────────────────────────────────────────
     public static String e(Object val) {
-        if (val == null) return "";
+        if (val == null) {
+            return "";
+        }
         return val.toString()
-            .replace("&", "&amp;").replace("<", "&lt;")
-            .replace(">", "&gt;").replace("\"", "&quot;");
+                .replace("&", "&amp;").replace("<", "&lt;")
+                .replace(">", "&gt;").replace("\"", "&quot;");
     }
 
     public static String statusBadge(String status) {
-        if (status == null) return "";
+        if (status == null) {
+            return "";
+        }
         return switch (status) {
-            case "active"    -> "<span class='badge badge-active'>● Active</span>";
-            case "suspended" -> "<span class='badge badge-suspended'>⏸ Suspended</span>";
-            case "de-active" -> "<span class='badge badge-deactive'>✕ De-active</span>";
-            case "on-hold"   -> "<span class='badge badge-onhold'>⏳ On Hold</span>";
-            default          -> "<span class='badge'>" + e(status) + "</span>";
+            case "active" ->
+                "<span class='badge badge-active'>● Active</span>";
+            case "suspended" ->
+                "<span class='badge badge-suspended'>⏸ Suspended</span>";
+            case "de-active" ->
+                "<span class='badge badge-deactive'>✕ De-active</span>";
+            case "on-hold" ->
+                "<span class='badge badge-onhold'>⏳ On Hold</span>";
+            default ->
+                "<span class='badge'>" + e(status) + "</span>";
         };
     }
 }

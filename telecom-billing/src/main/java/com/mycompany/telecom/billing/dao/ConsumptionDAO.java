@@ -19,7 +19,8 @@ public class ConsumptionDAO {
     /**
      * Returns all active consumption rows for the given contract, joined with
      * service_package to get name, type and total quota.
-     * @return 
+     *
+     * @return
      */
     public List<ConsumptionView> findByContractId(int contractId) throws SQLException {
         List<ConsumptionView> list = new ArrayList<>();

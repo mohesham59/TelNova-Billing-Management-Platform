@@ -21,10 +21,10 @@ import java.io.PrintWriter;
 @WebServlet("/dashboard")
 public class DashboardServlet extends HttpServlet {
 
-    private final UserDAO           userDAO    = new UserDAO();
-    private final ContractDAO       contractDAO= new ContractDAO();
-    private final RatePlanDAO       planDAO    = new RatePlanDAO();
-    private final ServicePackageDAO pkgDAO     = new ServicePackageDAO();
+    private final UserDAO userDAO = new UserDAO();
+    private final ContractDAO contractDAO = new ContractDAO();
+    private final RatePlanDAO planDAO = new RatePlanDAO();
+    private final ServicePackageDAO pkgDAO = new ServicePackageDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -34,11 +34,13 @@ public class DashboardServlet extends HttpServlet {
 
         int users = 0, contracts = 0, plans = 0, packages = 0;
         try {
-            users     = userDAO.findAll().size();
+            users = userDAO.findAll().size();
             contracts = contractDAO.findAll().size();
-            plans     = planDAO.findAll().size();
-            packages  = pkgDAO.findAll().size();
-        } catch (Exception ignored) {}
+            plans = planDAO.findAll().size();
+            packages = pkgDAO.findAll().size();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         String ctx = req.getContextPath();
         out.print(HtmlLayout.header("Dashboard", "dashboard", ctx));
@@ -51,10 +53,10 @@ public class DashboardServlet extends HttpServlet {
             <div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px;'>
             """);
 
-        stat(out, "👤", "purple", "Total Customers",     users,     ctx + "/users/");
-        stat(out, "📋", "teal",   "Active Contracts",    contracts, ctx + "/contracts/");
-        stat(out, "💳", "orange", "Rate Plans",          plans,     ctx + "/rateplans/");
-        stat(out, "📦", "red",    "Service Packages",    packages,  ctx + "/packages/");
+        stat(out, "👤", "purple", "Total Customers", users, ctx + "/users/");
+        stat(out, "📋", "teal", "Active Contracts", contracts, ctx + "/contracts/");
+        stat(out, "💳", "orange", "Rate Plans", plans, ctx + "/rateplans/");
+        stat(out, "📦", "red", "Service Packages", packages, ctx + "/packages/");
 
         out.print("</div>");
 
@@ -63,17 +65,17 @@ public class DashboardServlet extends HttpServlet {
             <div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;'>
             """);
         quickCard(out, "👤", "Manage Customers",
-            "Add, update, and remove customer records.",
-            ctx + "/users/new", "Add Customer", ctx + "/users/", "View All");
+                "Add, update, and remove customer records.",
+                ctx + "/users/new", "Add Customer", ctx + "/users/", "View All");
         quickCard(out, "📋", "Manage Contracts",
-            "Link customers to rate plans and phone numbers.",
-            ctx + "/contracts/new", "New Contract", ctx + "/contracts/", "View All");
+                "Link customers to rate plans and phone numbers.",
+                ctx + "/contracts/new", "New Contract", ctx + "/contracts/", "View All");
         quickCard(out, "💳", "Rate Plans",
-            "Define pricing, ROR rates, and monthly fees.",
-            ctx + "/rateplans/new", "New Plan", ctx + "/rateplans/", "View All");
+                "Define pricing, ROR rates, and monthly fees.",
+                ctx + "/rateplans/new", "New Plan", ctx + "/rateplans/", "View All");
         quickCard(out, "📦", "Service Packages",
-            "Create voice, data, and SMS quota bundles.",
-            ctx + "/packages/new", "New Package", ctx + "/packages/", "View All");
+                "Create voice, data, and SMS quota bundles.",
+                ctx + "/packages/new", "New Package", ctx + "/packages/", "View All");
         out.print("</div>");
 
         out.print(HtmlLayout.footer());
@@ -94,7 +96,7 @@ public class DashboardServlet extends HttpServlet {
     }
 
     private void quickCard(PrintWriter out, String icon, String title, String desc,
-                           String href1, String btn1, String href2, String btn2) {
+            String href1, String btn1, String href2, String btn2) {
         out.printf("""
             <div class='card'>
               <div class='card-body'>

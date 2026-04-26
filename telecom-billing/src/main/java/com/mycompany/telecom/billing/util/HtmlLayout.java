@@ -326,55 +326,54 @@ public class HtmlLayout {
 
     // ─── NAV items ──────────────────────────────────────────────────────────
     private static final String[][] NAV = {
-        {"dashboard",  "🏠", "Dashboard",        "/dashboard"},
-        {"users",      "👤", "Customers",         "/users/"},
-        {"contracts",  "📋", "Contracts",         "/contracts/"},
-        {"rateplans",  "💳", "Rate Plans",         "/rateplans/"},
-        {"packages",   "📦", "Service Packages",  "/packages/"},
-    };
+        {"dashboard", "🏠", "Dashboard", "/dashboard"},
+        {"users", "👤", "Customers", "/users/"},
+        {"contracts", "📋", "Contracts", "/contracts/"},
+        {"rateplans", "💳", "Rate Plans", "/rateplans/"},
+        {"packages", "📦", "Service Packages", "/packages/"},};
 
     // ─── Full page header ────────────────────────────────────────────────────
     public static String header(String pageTitle, String activeSection, String contextPath) {
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html><html lang='en'><head>")
-          .append("<meta charset='UTF-8'>")
-          .append("<meta name='viewport' content='width=device-width,initial-scale=1'>")
-          .append("<title>").append(pageTitle).append(" — Telecom Admin</title>")
-          .append("<link rel='preconnect' href='https://fonts.googleapis.com'>")
-          .append("<link href='https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap' rel='stylesheet'>")
-          .append("<style>").append(CSS).append("</style>")
-          .append("</head><body>");
+                .append("<meta charset='UTF-8'>")
+                .append("<meta name='viewport' content='width=device-width,initial-scale=1'>")
+                .append("<title>").append(pageTitle).append(" — Telecom Admin</title>")
+                .append("<link rel='preconnect' href='https://fonts.googleapis.com'>")
+                .append("<link href='https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap' rel='stylesheet'>")
+                .append("<style>").append(CSS).append("</style>")
+                .append("</head><body>");
 
         // ── Sidebar
         sb.append("<aside class='sidebar'>")
-          .append("<div class='sidebar-logo'>")
-          .append("<div class='logo-icon'>📡</div>")
-          .append("<div><span>TelecomBill</span><small>Admin Panel</small></div>")
-          .append("</div>")
-          .append("<nav class='sidebar-nav'>")
-          .append("<div class='nav-label'>Main Menu</div>");
+                .append("<div class='sidebar-logo'>")
+                .append("<div class='logo-icon'>📡</div>")
+                .append("<div><span>TelecomBill</span><small>Admin Panel</small></div>")
+                .append("</div>")
+                .append("<nav class='sidebar-nav'>")
+                .append("<div class='nav-label'>Main Menu</div>");
 
         for (String[] item : NAV) {
             String active = item[0].equals(activeSection) ? " active" : "";
             sb.append("<a href='").append(contextPath).append(item[3]).append("' class='nav-item").append(active).append("'>")
-              .append("<span class='icon'>").append(item[1]).append("</span>")
-              .append(item[2])
-              .append("</a>");
+                    .append("<span class='icon'>").append(item[1]).append("</span>")
+                    .append(item[2])
+                    .append("</a>");
         }
 
         sb.append("</nav>")
-          .append("<div class='sidebar-footer'>")
-          .append("<a href='").append(contextPath).append("/logout' class='logout-btn'>")
-          .append("<span class='icon'>🚪</span> Logout")
-          .append("</a></div></aside>");
+                .append("<div class='sidebar-footer'>")
+                .append("<a href='").append(contextPath).append("/logout' class='logout-btn'>")
+                .append("<span class='icon'>🚪</span> Logout")
+                .append("</a></div></aside>");
 
         // ── Main wrapper
         sb.append("<div class='main'>")
-          .append("<div class='topbar'>")
-          .append("<span class='page-title'>").append(pageTitle).append("</span>")
-          .append("<div class='admin-badge'><div class='avatar'>A</div><span>Admin</span></div>")
-          .append("</div>")
-          .append("<div class='content'>");
+                .append("<div class='topbar'>")
+                .append("<span class='page-title'>").append(pageTitle).append("</span>")
+                .append("<div class='admin-badge'><div class='avatar'>A</div><span>Admin</span></div>")
+                .append("</div>")
+                .append("<div class='content'>");
 
         return sb.toString();
     }
@@ -400,12 +399,24 @@ public class HtmlLayout {
 
     // ─── Toast helper ────────────────────────────────────────────────────────
     public static String toast(String param) {
-        if (param == null) return "";
+        if (param == null) {
+            return "";
+        }
         String icon, cls, msg;
         switch (param) {
-            case "saved"   -> { icon = "✅"; cls = "toast-success"; msg = "Record saved successfully."; }
-            case "deleted" -> { icon = "🗑️"; cls = "toast-success"; msg = "Record deleted."; }
-            default        -> { return ""; }
+            case "saved" -> {
+                icon = "✅";
+                cls = "toast-success";
+                msg = "Record saved successfully.";
+            }
+            case "deleted" -> {
+                icon = "🗑️";
+                cls = "toast-success";
+                msg = "Record deleted.";
+            }
+            default -> {
+                return "";
+            }
         }
         return "<div class='toast " + cls + "'><span class='toast-icon'>" + icon + "</span>" + msg + "</div>";
     }
@@ -416,23 +427,28 @@ public class HtmlLayout {
         StringBuilder sb = new StringBuilder("<div class='breadcrumb'>");
         for (int i = 0; i < parts.length; i += 2) {
             String label = parts[i];
-            String url   = (i + 1 < parts.length) ? parts[i + 1] : null;
-            if (i > 0) sb.append("<span class='sep'>›</span>");
-            if (url != null)
+            String url = (i + 1 < parts.length) ? parts[i + 1] : null;
+            if (i > 0) {
+                sb.append("<span class='sep'>›</span>");
+            }
+            if (url != null) {
                 sb.append("<a href='").append(url).append("'>").append(label).append("</a>");
-            else
+            } else {
                 sb.append("<span class='current'>").append(label).append("</span>");
+            }
         }
         return sb.append("</div>").toString();
     }
 
     // ─── Escape HTML ─────────────────────────────────────────────────────────
     public static String e(Object val) {
-        if (val == null) return "";
+        if (val == null) {
+            return "";
+        }
         return val.toString()
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;");
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 }

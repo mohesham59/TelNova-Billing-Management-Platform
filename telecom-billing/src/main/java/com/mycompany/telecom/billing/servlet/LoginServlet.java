@@ -98,8 +98,9 @@ public class LoginServlet extends HttpServlet {
               </div>
             """);
 
-        if (error != null)
+        if (error != null) {
             out.print("<div class='err'>⚠️ " + HtmlLayout.e(error) + "</div>");
+        }
 
         out.print("""
               <form method='post'>

@@ -18,7 +18,8 @@ public class BillDAO {
 
     /**
      * Returns the 6 most recent bills for the given contract, newest first.
-     * @return 
+     *
+     * @return
      */
     public List<BillSummary> findRecentByContractId(int contractId) throws SQLException {
         List<BillSummary> list = new ArrayList<>();

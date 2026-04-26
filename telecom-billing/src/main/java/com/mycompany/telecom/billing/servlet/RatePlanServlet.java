@@ -31,16 +31,27 @@ public class RatePlanServlet extends HttpServlet {
             throws ServletException, IOException {
         String path = req.getPathInfo();
         try {
-            if (path == null || path.equals("/"))      { renderList(req, resp); }
-            else if (path.equals("/new"))              { renderForm(req, resp, new RatePlan(), false); }
-            else if (path.startsWith("/edit/"))        { int id = Integer.parseInt(path.substring(6));
-                                                          RatePlan rp = dao.findById(id);
-                                                          if (rp == null) { resp.sendError(404); return; }
-                                                          renderForm(req, resp, rp, true); }
-            else if (path.startsWith("/delete/"))      { dao.delete(Integer.parseInt(path.substring(8)));
-                                                          resp.sendRedirect(req.getContextPath() + "/rateplans/?success=deleted"); }
-            else resp.sendError(404);
-        } catch (Exception e) { throw new ServletException(e); }
+            if (path == null || path.equals("/")) {
+                renderList(req, resp);
+            } else if (path.equals("/new")) {
+                renderForm(req, resp, new RatePlan(), false);
+            } else if (path.startsWith("/edit/")) {
+                int id = Integer.parseInt(path.substring(6));
+                RatePlan rp = dao.findById(id);
+                if (rp == null) {
+                    resp.sendError(404);
+                    return;
+                }
+                renderForm(req, resp, rp, true);
+            } else if (path.startsWith("/delete/")) {
+                dao.delete(Integer.parseInt(path.substring(8)));
+                resp.sendRedirect(req.getContextPath() + "/rateplans/?success=deleted");
+            } else {
+                resp.sendError(404);
+            }
+        } catch (Exception e) {
+            throw new ServletException(e);
+        }
     }
 
     @Override
@@ -55,13 +66,16 @@ public class RatePlanServlet extends HttpServlet {
             rp.setRorSms(bd(req.getParameter("rorSms")));
             rp.setMonthlyFee(bd(req.getParameter("monthlyFee")));
 
-            if ("/new".equals(path)) dao.insert(rp);
-            else if (path != null && path.startsWith("/edit/")) {
+            if ("/new".equals(path)) {
+                dao.insert(rp);
+            } else if (path != null && path.startsWith("/edit/")) {
                 rp.setId(Integer.parseInt(path.substring(6)));
                 dao.update(rp);
             }
             resp.sendRedirect(req.getContextPath() + "/rateplans/?success=saved");
-        } catch (Exception e) { throw new ServletException(e); }
+        } catch (Exception e) {
+            throw new ServletException(e);
+        }
     }
 
     // ── LIST ─────────────────────────────────────────────────────────────────
@@ -108,9 +122,9 @@ public class RatePlanServlet extends HttpServlet {
                       </td>
                     </tr>
                     """,
-                    rp.getId(), HtmlLayout.e(rp.getPlanName()),
-                    rp.getMonthlyFee(), rp.getRorData(), rp.getRorVoice(), rp.getRorSms(),
-                    ctx, rp.getId(), ctx, rp.getId());
+                        rp.getId(), HtmlLayout.e(rp.getPlanName()),
+                        rp.getMonthlyFee(), rp.getRorData(), rp.getRorVoice(), rp.getRorSms(),
+                        ctx, rp.getId(), ctx, rp.getId());
             }
             out.print("</tbody></table>");
         }
@@ -121,16 +135,16 @@ public class RatePlanServlet extends HttpServlet {
     // ── FORM ─────────────────────────────────────────────────────────────────
     private void renderForm(HttpServletRequest req, HttpServletResponse resp, RatePlan rp, boolean editing)
             throws Exception {
-        String ctx    = req.getContextPath();
+        String ctx = req.getContextPath();
         String action = editing ? ctx + "/rateplans/edit/" + rp.getId() : ctx + "/rateplans/new";
-        String title  = editing ? "Edit Rate Plan" : "New Rate Plan";
+        String title = editing ? "Edit Rate Plan" : "New Rate Plan";
         resp.setContentType("text/html;charset=UTF-8");
         PrintWriter out = resp.getWriter();
         out.print(HtmlLayout.header(title, "rateplans", ctx));
         out.print(HtmlLayout.breadcrumb(
-            "Dashboard", ctx + "/dashboard",
-            "Rate Plans", ctx + "/rateplans/",
-            title, null));
+                "Dashboard", ctx + "/dashboard",
+                "Rate Plans", ctx + "/rateplans/",
+                title, null));
 
         out.printf("""
             <div class='card' style='max-width:720px;'>
@@ -167,9 +181,9 @@ public class RatePlanServlet extends HttpServlet {
               </div>
             </div>
             """,
-            editing ? "✏️" : "➕", title, action,
-            HtmlLayout.e(rp.getPlanName()), rp.getMonthlyFee(),
-            rp.getRorData(), rp.getRorVoice(), rp.getRorSms(), ctx);
+                editing ? "✏️" : "➕", title, action,
+                HtmlLayout.e(rp.getPlanName()), rp.getMonthlyFee(),
+                rp.getRorData(), rp.getRorVoice(), rp.getRorSms(), ctx);
 
         out.print(HtmlLayout.footer());
     }

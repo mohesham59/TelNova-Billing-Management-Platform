@@ -17,34 +17,33 @@ import java.util.List;
  */
 public class ContractDAO {
 
-    private static final String SELECT_COLS =
-        "c.id, c.user_id, c.rateplan_id, c.msisdn, c.status, " +
-        "c.credit_limit, c.available_credit, c.activation_date, c.billing_cycle_day, " +
-        "u.name AS user_name, r.plan_name";
+    private static final String SELECT_COLS
+            = "c.id, c.user_id, c.rateplan_id, c.msisdn, c.status, "
+            + "c.credit_limit, c.available_credit, c.activation_date, c.billing_cycle_day, "
+            + "u.name AS user_name, r.plan_name";
 
     public List<Contract> findAll() throws SQLException {
         List<Contract> list = new ArrayList<>();
-        String sql = "SELECT " + SELECT_COLS +
-                     " FROM contract c " +
-                     " JOIN users u ON u.id = c.user_id " +
-                     " JOIN rateplan r ON r.id = c.rateplan_id " +
-                     " ORDER BY c.id";
-        try (Connection c = DBConnection.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) list.add(map(rs));
+        String sql = "SELECT " + SELECT_COLS
+                + " FROM contract c "
+                + " JOIN users u ON u.id = c.user_id "
+                + " JOIN rateplan r ON r.id = c.rateplan_id "
+                + " ORDER BY c.id";
+        try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(map(rs));
+            }
         }
         return list;
     }
 
     public Contract findById(int id) throws SQLException {
-        String sql = "SELECT " + SELECT_COLS +
-                     " FROM contract c " +
-                     " JOIN users u ON u.id = c.user_id " +
-                     " JOIN rateplan r ON r.id = c.rateplan_id " +
-                     " WHERE c.id = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        String sql = "SELECT " + SELECT_COLS
+                + " FROM contract c "
+                + " JOIN users u ON u.id = c.user_id "
+                + " JOIN rateplan r ON r.id = c.rateplan_id "
+                + " WHERE c.id = ?";
+        try (Connection conn = DBConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? map(rs) : null;
@@ -53,11 +52,10 @@ public class ContractDAO {
     }
 
     public void insert(Contract ct) throws SQLException {
-        String sql = "INSERT INTO contract " +
-                     "(user_id, rateplan_id, msisdn, status, credit_limit, available_credit, activation_date, billing_cycle_day) " +
-                     "VALUES (?,?,?,?::contract_status,?,?,?,?)";
-        try (Connection c = DBConnection.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
+        String sql = "INSERT INTO contract "
+                + "(user_id, rateplan_id, msisdn, status, credit_limit, available_credit, activation_date, billing_cycle_day) "
+                + "VALUES (?,?,?,?::contract_status,?,?,?,?)";
+        try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, ct.getUserId());
             ps.setInt(2, ct.getRatePlanId());
             ps.setString(3, ct.getMsisdn());
@@ -71,10 +69,9 @@ public class ContractDAO {
     }
 
     public void update(Contract ct) throws SQLException {
-        String sql = "UPDATE contract SET user_id=?, rateplan_id=?, msisdn=?, status=?::contract_status, " +
-                     "credit_limit=?, available_credit=?, activation_date=?, billing_cycle_day=? WHERE id=?";
-        try (Connection c = DBConnection.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
+        String sql = "UPDATE contract SET user_id=?, rateplan_id=?, msisdn=?, status=?::contract_status, "
+                + "credit_limit=?, available_credit=?, activation_date=?, billing_cycle_day=? WHERE id=?";
+        try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, ct.getUserId());
             ps.setInt(2, ct.getRatePlanId());
             ps.setString(3, ct.getMsisdn());
@@ -90,8 +87,7 @@ public class ContractDAO {
 
     public void delete(int id) throws SQLException {
         String sql = "DELETE FROM contract WHERE id = ?";
-        try (Connection c = DBConnection.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, id);
             ps.executeUpdate();
         }
@@ -107,7 +103,9 @@ public class ContractDAO {
         ct.setCreditLimit(rs.getBigDecimal("credit_limit"));
         ct.setAvailableCredit(rs.getBigDecimal("available_credit"));
         Date ad = rs.getDate("activation_date");
-        if (ad != null) ct.setActivationDate(ad.toLocalDate());
+        if (ad != null) {
+            ct.setActivationDate(ad.toLocalDate());
+        }
         ct.setBillingCycleDay(rs.getInt("billing_cycle_day"));
         ct.setUserName(rs.getString("user_name"));
         ct.setPlanName(rs.getString("plan_name"));

@@ -5,19 +5,19 @@
 --   a) Verify contract is active
 --   b) Determine ROR (voice / sms / data) from rateplan
 --   c) Convert raw duration to billing units:
---      - Voice: seconds → CEIL to minutes (e.g. 140s = 3 min)
---      - SMS:   message count (no conversion)
+--      - Voice: seconds -> CEIL to minutes
+--      - SMS:   message count
 --      - Data:  CEIL to MB
 --   d) Calculate effective usage with on-net/cross-net:
---      - Voice on-net  → 1 unit per minute
---      - Voice cross-net → 5 units per minute
---      - SMS/Data → same as billing units
+--      - Voice on-net  → 1 unit/minute
+--      - Voice cross-net → 5 units/minute
+--      - SMS: 1 unit/SMS
+--      - Data:  1 unit/MB
 --   e) Find ALL remaining bundles for that service type
---      in the current billing cycle, ordered by priority:
---        Priority 1 (Free Units)   → consumed FIRST
---        Priority 2 (Bundles)      → consumed SECOND
+--        Priority 1 (Free Units) -> consumed FIRST
+--        Priority 2 (Bundles) -> consumed SECOND
 --   f) Deduct from packages in priority order
---      → charge remainder at ROR
+--      and charge the remainder at ROR
 --   g) Cap total cost at available_credit
 --   h) Deduct from contract credit
 --   i) Track ROR usage in ror_contract
@@ -52,8 +52,8 @@ DECLARE
     v_credit_before   NUMERIC;
     v_ror_units       INTEGER;
     v_deduct          NUMERIC;
-    v_billing_units   NUMERIC;   -- duration converted to billing units (minutes / MB / count)
-    v_effective_usage NUMERIC;   -- billing units × on-net/cross-net multiplier
+    v_billing_units   NUMERIC;
+    v_effective_usage NUMERIC;
     v_call_type       TEXT;
     v_company_prefix  VARCHAR := '013';
     v_unit_multiplier NUMERIC;
@@ -89,13 +89,7 @@ BEGIN
             v_ror := COALESCE(rec.ror_data, 0);
         END IF;
 
-        -- --------------------------------------------------
-        -- Step A2: Convert raw duration to billing units
-        --   Voice: seconds → minutes (CEIL, e.g. 140s = 3 min)
-        --   SMS:   message count (no conversion needed)
-        --   Data:  CEIL to MB (for partial MB)
-        --   Bundles are defined in these same units
-        -- --------------------------------------------------
+        -- Convert raw duration to billing units
         IF rec.service_type = 'voice' THEN
             v_billing_units := CEIL(rec.duration / 60.0);
         ELSIF rec.service_type = 'sms' THEN
@@ -106,9 +100,6 @@ BEGIN
 
         -- --------------------------------------------------
         -- Step B: Calculate effective usage (on-net / cross-net)
-        --   Voice on-net (same company prefix): 1 unit/min
-        --   Voice cross-net (other operator):   5 units/min
-        --   SMS / Data: no multiplier
         -- --------------------------------------------------
         IF rec.service_type = 'voice' THEN
             IF LEFT(rec.receiver_id, LENGTH(v_company_prefix)) = v_company_prefix THEN
@@ -206,7 +197,7 @@ BEGIN
         END IF;
 
         -- --------------------------------------------------
-        -- Step H: Track ROR usage via upsert
+        -- Step H: Track ROR usage
         -- --------------------------------------------------
         IF v_cost > 0 AND v_ror > 0 THEN
             v_ror_units := CEIL(v_cost / v_ror)::INTEGER;
@@ -254,7 +245,7 @@ BEGIN
     END LOOP;
 
     -- ==========================================================
-    -- PHASE 2: Flag orphan CDRs (no matching active contract)
+    -- PHASE 2: Flag orphan CDRs
     -- ==========================================================
     UPDATE cdr
     SET rating_error = CASE

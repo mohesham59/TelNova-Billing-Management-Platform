@@ -23,12 +23,11 @@ DECLARE
     v_total_amount     NUMERIC(12,2);
     v_tax_rate         CONSTANT NUMERIC := 0.10;
 BEGIN
-    -- ── Billing period = the month BEFORE billing_date ──
-    -- If billing_date = 2026-06-01, period = May 1 → June 1
+    -- Billing period = the month BEFORE billing_date
     v_period_start := DATE_TRUNC('month', p_billing_date - INTERVAL '1 month')::DATE;
     v_period_end   := DATE_TRUNC('month', p_billing_date)::DATE;
 
-    -- ── Duplicate bill protection ──
+    -- Duplicate bill protection 
     IF EXISTS (
         SELECT 1 FROM bill
         WHERE  contract_id  = p_contract_id
@@ -40,7 +39,7 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    -- ── Fetch contract details ──
+    -- Fetch contract details 
     SELECT msisdn, rateplan_id
     INTO   v_contract_msisdn, v_rateplan_id
     FROM   contract
@@ -50,7 +49,7 @@ BEGIN
         RAISE EXCEPTION 'Contract id % not found', p_contract_id;
     END IF;
 
-    -- ── Usage cost: sum rated_cost from CDRs in the period ──
+    -- Usage cost: sum rated_cost from CDRs in the period 
     SELECT COALESCE(SUM(c.rated_cost), 0)
     INTO   v_usage_cost
     FROM   cdr c
@@ -59,7 +58,7 @@ BEGIN
       AND  c.start_time >= v_period_start::TIMESTAMP
       AND  c.start_time <  v_period_end::TIMESTAMP;
 
-    -- ── Aggregate CDR usage counts for display ──
+    -- Aggregate CDR usage counts for display 
     SELECT
         COALESCE(SUM(CASE WHEN c.service_type = 'voice'
                           THEN c.duration ELSE 0 END), 0)::INTEGER,
@@ -74,13 +73,13 @@ BEGIN
       AND  c.start_time >= v_period_start::TIMESTAMP
       AND  c.start_time <  v_period_end::TIMESTAMP;
 
-    -- ── Monthly recurring fee from rateplan ──
+    -- Monthly recurring fee from rateplan 
     SELECT COALESCE(rp.monthly_fee, 0)
     INTO   v_recurring_fee
     FROM   rateplan rp
     WHERE  rp.id = v_rateplan_id;
 
-    -- ── One-time fees applied DURING this billing period only ──
+    -- One-time fees 
     SELECT COALESCE(SUM(otf.price), 0)
     INTO   v_one_time_fees
     FROM   contract_one_time cot
@@ -90,12 +89,12 @@ BEGIN
       AND  cot.applied_date >= v_period_start
       AND  cot.applied_date <  v_period_end;
 
-    -- ── Calculate totals ──
+    -- Calculate totals 
     v_subtotal     := v_usage_cost + v_recurring_fee + v_one_time_fees;
     v_taxes        := ROUND(v_subtotal * v_tax_rate, 2);
     v_total_amount := ROUND(v_subtotal + v_taxes, 2);
 
-    -- ── Insert bill row ──
+    -- Insert bill row
     INSERT INTO bill (
         contract_id, billing_date,
         period_start, period_end,
@@ -114,7 +113,7 @@ BEGIN
     )
     RETURNING id INTO v_bill_id;
 
-    -- ── Mark one-time fees as billed (only this period) ──
+    -- Mark one-time fees as billed (only this period) 
     UPDATE contract_one_time
     SET    billed_flag = TRUE,
            bill_id     = v_bill_id
@@ -123,13 +122,13 @@ BEGIN
       AND  applied_date >= v_period_start
       AND  applied_date <  v_period_end;
 
-    -- ── Link ror_contract to this bill ──
+    -- Link ror_contract to this bill 
     UPDATE ror_contract
     SET    bill_id = v_bill_id
     WHERE  contract_id = p_contract_id
       AND  bill_id IS NULL;
 
-    -- ── Insert invoice record (PDF path filled later by Java) ──
+    -- Insert invoice record (PDF path)
     INSERT INTO invoice (bill_id, month)
     VALUES (v_bill_id, NOW());
 

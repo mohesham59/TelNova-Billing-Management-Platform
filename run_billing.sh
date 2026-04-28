@@ -20,8 +20,8 @@
 # ================================================================
 
 # ── EDIT THESE TWO LINES TO MATCH YOUR MACHINE ─────────────────
-PROJECT_DIR="/home/mohesham/Desktop/ITI - Telecom/TeleMeter-Billing-Management-Platform/TeleMeter"
-JAVA="/usr/bin/java"   # or wherever your java is — run: which java
+PROJECT_DIR="/your/path/to/TeleMeter-Billing-Management-Platform/TeleMeter"
+JAVA="/your/path/to/jdk/bin/java"
 # ───────────────────────────────────────────────────────────────
 #
 # Examples:

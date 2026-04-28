@@ -63,20 +63,31 @@ BEGIN
     -- ==========================================================
     FOR rec IN
         SELECT
-            cdr.*,
+            -- FIX: explicit columns instead of cdr.*
+            -- cdr.* causes ambiguity with RETURNS TABLE output
+            -- columns (e.g. "service" vs "service_type")
+            dr.id,
+            dr.caller_id,
+            dr.receiver_id,
+            dr.service_type,
+            dr.duration,
+            dr.start_time,
+            dr.rated_flag,
+            dr.rated_cost,
+            dr.rating_error,
             ct.id               AS contract_id,
             ct.available_credit,
             ct.rateplan_id,
             rp.ror_voice,
             rp.ror_sms,
             rp.ror_data
-        FROM   cdr
-        JOIN   contract ct ON cdr.caller_id = ct.msisdn
+        FROM   cdr dr
+        JOIN   contract ct ON dr.caller_id = ct.msisdn
                            AND ct.status = 'active'
         JOIN   rateplan rp ON ct.rateplan_id = rp.id
-        WHERE  cdr.rated_flag = FALSE
-          AND  cdr.rating_error IS NULL
-        ORDER  BY cdr.start_time
+        WHERE  dr.rated_flag = FALSE
+          AND  dr.rating_error IS NULL
+        ORDER  BY dr.start_time
     LOOP
         -- --------------------------------------------------
         -- Step A: Determine the ROR for this service type
@@ -147,7 +158,6 @@ BEGIN
               AND cont_cons.starting_date = date_trunc('month', rec.start_time)::DATE
             ORDER BY sp.priority ASC, sp.id ASC
         LOOP
-            -- Exit early if all usage is covered
             IF v_extra <= 0 THEN
                 EXIT;
             END IF;
@@ -158,14 +168,12 @@ BEGIN
                 CONTINUE;
             END IF;
 
-            -- Calculate how much to deduct from this package
             IF v_extra <= v_remaining THEN
                 v_deduct := v_extra;
             ELSE
                 v_deduct := v_remaining;
             END IF;
 
-            -- Update consumption (single column tracks total)
             UPDATE contract_consumption
             SET consumption = consumption + v_deduct
             WHERE id = pkg.cc_id;
@@ -246,27 +254,33 @@ BEGIN
 
     -- ==========================================================
     -- PHASE 2: Flag orphan CDRs
+    -- FIX: alias the target table to avoid self-reference
+    --      ambiguity in correlated subqueries
     -- ==========================================================
-    UPDATE cdr
+    UPDATE cdr orphan
     SET rating_error = CASE
         WHEN NOT EXISTS (
-            SELECT 1 FROM contract WHERE msisdn = cdr.caller_id
+            SELECT 1 FROM contract ct2
+            WHERE ct2.msisdn = orphan.caller_id
         ) THEN 'No matching contract for caller_id'
         WHEN EXISTS (
-            SELECT 1 FROM contract
-            WHERE msisdn = cdr.caller_id
-              AND status != 'active'
+            SELECT 1 FROM contract ct3
+            WHERE ct3.msisdn = orphan.caller_id
+              AND ct3.status != 'active'
         ) THEN 'Contract exists but is not active (status: ' || (
-            SELECT status FROM contract WHERE msisdn = cdr.caller_id LIMIT 1
+            SELECT ct4.status::TEXT
+            FROM contract ct4
+            WHERE ct4.msisdn = orphan.caller_id
+            LIMIT 1
         ) || ')'
         ELSE 'Unknown rating error'
     END
-    WHERE rated_flag = FALSE
-      AND rating_error IS NULL
+    WHERE orphan.rated_flag = FALSE
+      AND orphan.rating_error IS NULL
       AND NOT EXISTS (
-          SELECT 1 FROM contract
-          WHERE msisdn = cdr.caller_id
-            AND status = 'active'
+          SELECT 1 FROM contract ct5
+          WHERE ct5.msisdn = orphan.caller_id
+            AND ct5.status = 'active'
       );
 
 END;

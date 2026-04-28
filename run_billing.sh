@@ -39,52 +39,84 @@ LOG_FILE="$LOG_DIR/billing_$(date +%Y%m).log"
 
 mkdir -p "$LOG_DIR"
 
-echo ""                                                >> "$LOG_FILE"
-echo "============================================"   >> "$LOG_FILE"
-echo "  Billing run started: $(date)"                 >> "$LOG_FILE"
-echo "============================================"   >> "$LOG_FILE"
+echo "" >> "$LOG_FILE"
+echo "============================================" >> "$LOG_FILE"
+echo "  Billing run started: $(date)" >> "$LOG_FILE"
+echo "============================================" >> "$LOG_FILE"
 
-# Verify PROJECT_DIR exists
+# ================================================================
+#  CHECK PROJECT DIR
+# ================================================================
 if [ ! -d "$PROJECT_DIR" ]; then
     echo "ERROR: PROJECT_DIR not found: $PROJECT_DIR" >> "$LOG_FILE"
-    echo "       Please update PROJECT_DIR at the top of this script." >> "$LOG_FILE"
     exit 1
 fi
 
-# Verify JAVA exists
+# ================================================================
+#  CHECK JAVA
+# ================================================================
 if [ ! -f "$JAVA" ]; then
-    echo "ERROR: Java binary not found: $JAVA"        >> "$LOG_FILE"
-    echo "       Run 'which java' to find your Java path." >> "$LOG_FILE"
+    echo "ERROR: Java not found: $JAVA" >> "$LOG_FILE"
     exit 1
 fi
 
-# Move to project directory
+# ================================================================
+#  MOVE TO PROJECT
+# ================================================================
 cd "$PROJECT_DIR" || {
-    echo "ERROR: Cannot cd into $PROJECT_DIR"         >> "$LOG_FILE"
+    echo "ERROR: Cannot cd into $PROJECT_DIR" >> "$LOG_FILE"
     exit 1
 }
 
-# Copy dependencies if not already present
+# ================================================================
+#  COPY DEPENDENCIES (if needed)
+# ================================================================
 if [ ! -d "target/dependency" ]; then
-    echo ">> Copying dependencies..."                 >> "$LOG_FILE"
-    mvn dependency:copy-dependencies -q              >> "$LOG_FILE" 2>&1
+    echo ">> Copying dependencies..." >> "$LOG_FILE"
+    mvn dependency:copy-dependencies -q >> "$LOG_FILE" 2>&1
 fi
 
-# Run the billing job
-echo ">> Running BillingCycleJob..."                  >> "$LOG_FILE"
+# ================================================================
+#  STEP 1 — PARSE CDR FILES
+# ================================================================
+echo "============================================" >> "$LOG_FILE"
+echo ">> STEP 1: CDR Parsing Started" >> "$LOG_FILE"
+
 "$JAVA" -cp "target/classes:target/dependency/*" \
-    com.a3m.billing.job.BillingCycleJob              >> "$LOG_FILE" 2>&1
+    com.telecom.parser.CdrParser >> "$LOG_FILE" 2>&1
+
+PARSE_EXIT=$?
+
+if [ $PARSE_EXIT -ne 0 ]; then
+    echo ">> FAILED: CDR Parsing failed" >> "$LOG_FILE"
+    echo ">> Billing aborted" >> "$LOG_FILE"
+    echo "============================================" >> "$LOG_FILE"
+    exit 1
+fi
+
+echo ">> STEP 1: CDR Parsing Completed" >> "$LOG_FILE"
+
+# ================================================================
+#  STEP 2 — BILLING ENGINE
+# ================================================================
+echo "============================================" >> "$LOG_FILE"
+echo ">> STEP 2: BillingCycleJob Started" >> "$LOG_FILE"
+
+"$JAVA" -cp "target/classes:target/dependency/*" \
+    com.a3m.billing.job.BillingCycleJob >> "$LOG_FILE" 2>&1
 
 EXIT_CODE=$?
 
+# ================================================================
+#  RESULT
+# ================================================================
 if [ $EXIT_CODE -eq 0 ]; then
-    echo ">> SUCCESS"                                 >> "$LOG_FILE"
+    echo ">> SUCCESS: Billing completed" >> "$LOG_FILE"
 else
-    echo ">> FAILED (exit code: $EXIT_CODE)"          >> "$LOG_FILE"
+    echo ">> FAILED (exit code: $EXIT_CODE)" >> "$LOG_FILE"
 fi
 
-echo "  Billing run finished: $(date)"               >> "$LOG_FILE"
-echo "============================================"   >> "$LOG_FILE"
+echo "  Billing run finished: $(date)" >> "$LOG_FILE"
+echo "============================================" >> "$LOG_FILE"
 
 exit $EXIT_CODE
-

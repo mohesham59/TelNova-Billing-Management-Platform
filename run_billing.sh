@@ -20,8 +20,8 @@
 # ================================================================
 
 # ── EDIT THESE TWO LINES TO MATCH YOUR MACHINE ─────────────────
-PROJECT_DIR="/your/path/to/TeleMeter-Billing-Management-Platform/TeleMeter"
-JAVA="/your/path/to/jdk/bin/java"
+PROJECT_DIR="/home/mohesham/Desktop/ITI - Telecom/TeleMeter-Billing-Management-Platform/TeleMeter"
+JAVA="/usr/bin/java"   # or wherever your java is — run: which java
 # ───────────────────────────────────────────────────────────────
 #
 # Examples:
@@ -33,6 +33,7 @@ JAVA="/your/path/to/jdk/bin/java"
 
 #   Windows: Use Git Bash or WSL and follow the Linux format above
 # ───────────────────────────────────────────────────────────────
+
 
 LOG_DIR="$PROJECT_DIR/../logs"
 LOG_FILE="$LOG_DIR/billing_$(date +%Y%m).log"

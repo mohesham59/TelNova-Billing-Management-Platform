@@ -16,24 +16,46 @@ import java.io.IOException;
  */
 @WebFilter("/*")
 public class AuthFilter implements Filter {
-
+ 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
-
+ 
         String uri = req.getRequestURI();
         String ctx = req.getContextPath();
-
-        // Allow static resources and login page
-        if (uri.startsWith(ctx + "/login")
-                || uri.startsWith(ctx + "/css/")
-                || uri.startsWith(ctx + "/js/")) {
+ 
+        // ── Always allow static assets ────────────────────────────────────────
+        if (uri.startsWith(ctx + "/css/") || uri.startsWith(ctx + "/js/")) {
             chain.doFilter(request, response);
             return;
         }
-
+ 
+        // ── Admin login — no session needed ───────────────────────────────────
+        if (uri.equals(ctx + "/login") || uri.equals(ctx + "/login/")) {
+            chain.doFilter(request, response);
+            return;
+        }
+ 
+        // ── Customer portal login — no session needed ─────────────────────────
+        if (uri.equals(ctx + "/portal/login") || uri.equals(ctx + "/portal/login/")) {
+            chain.doFilter(request, response);
+            return;
+        }
+ 
+        // ── Customer portal routes — require portal session ───────────────────
+        if (uri.startsWith(ctx + "/portal/")) {
+            HttpSession session = req.getSession(false);
+            if (session != null && session.getAttribute("portalUserId") != null) {
+                chain.doFilter(request, response);
+            } else {
+                resp.sendRedirect(ctx + "/portal/login");
+            }
+            return;
+        }
+ 
+        // ── All other routes — require admin session ──────────────────────────
         HttpSession session = req.getSession(false);
         if (session != null && Boolean.TRUE.equals(session.getAttribute("loggedIn"))) {
             chain.doFilter(request, response);

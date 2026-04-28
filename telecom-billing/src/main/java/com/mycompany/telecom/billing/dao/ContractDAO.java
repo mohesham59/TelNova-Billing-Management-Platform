@@ -22,13 +22,31 @@ public class ContractDAO {
             + "c.credit_limit, c.available_credit, c.activation_date, c.billing_cycle_day, "
             + "u.name AS user_name, r.plan_name";
 
+    private static final String BASE_JOIN
+            = " FROM contract c"
+            + " JOIN users u ON u.id = c.user_id"
+            + " JOIN rateplan r ON r.id = c.rateplan_id";
+
+    // ── Portal: all contracts for a logged-in user ────────────────────────────
+    public List<Contract> findByUserId(String userId) throws SQLException {
+        List<Contract> list = new ArrayList<>();
+        String sql = "SELECT " + SELECT_COLS + BASE_JOIN
+                + " WHERE c.user_id = ? ORDER BY c.id";
+        try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(map(rs));
+                }
+            }
+        }
+        return list;
+    }
+
+    // ── Admin CRUD ────────────────────────────────────────────────────────────
     public List<Contract> findAll() throws SQLException {
         List<Contract> list = new ArrayList<>();
-        String sql = "SELECT " + SELECT_COLS
-                + " FROM contract c "
-                + " JOIN users u ON u.id = c.user_id "
-                + " JOIN rateplan r ON r.id = c.rateplan_id "
-                + " ORDER BY c.id";
+        String sql = "SELECT " + SELECT_COLS + BASE_JOIN + " ORDER BY c.id";
         try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 list.add(map(rs));
@@ -38,11 +56,7 @@ public class ContractDAO {
     }
 
     public Contract findById(int id) throws SQLException {
-        String sql = "SELECT " + SELECT_COLS
-                + " FROM contract c "
-                + " JOIN users u ON u.id = c.user_id "
-                + " JOIN rateplan r ON r.id = c.rateplan_id "
-                + " WHERE c.id = ?";
+        String sql = "SELECT " + SELECT_COLS + BASE_JOIN + " WHERE c.id = ?";
         try (Connection conn = DBConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
@@ -52,9 +66,9 @@ public class ContractDAO {
     }
 
     public void insert(Contract ct) throws SQLException {
-        String sql = "INSERT INTO contract "
-                + "(user_id, rateplan_id, msisdn, status, credit_limit, available_credit, activation_date, billing_cycle_day) "
-                + "VALUES (?,?,?,?::contract_status,?,?,?,?)";
+        String sql = "INSERT INTO contract"
+                + " (user_id, rateplan_id, msisdn, status, credit_limit, available_credit, activation_date, billing_cycle_day)"
+                + " VALUES (?,?,?,?::contract_status,?,?,?,?)";
         try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, ct.getUserId());
             ps.setInt(2, ct.getRatePlanId());
@@ -62,15 +76,18 @@ public class ContractDAO {
             ps.setString(4, ct.getStatus());
             ps.setBigDecimal(5, ct.getCreditLimit());
             ps.setBigDecimal(6, ct.getAvailableCredit());
-            ps.setDate(7, ct.getActivationDate() != null ? Date.valueOf(ct.getActivationDate()) : Date.valueOf(java.time.LocalDate.now()));
+            ps.setDate(7, ct.getActivationDate() != null
+                    ? Date.valueOf(ct.getActivationDate())
+                    : Date.valueOf(java.time.LocalDate.now()));
             ps.setInt(8, ct.getBillingCycleDay());
             ps.executeUpdate();
         }
     }
 
     public void update(Contract ct) throws SQLException {
-        String sql = "UPDATE contract SET user_id=?, rateplan_id=?, msisdn=?, status=?::contract_status, "
-                + "credit_limit=?, available_credit=?, activation_date=?, billing_cycle_day=? WHERE id=?";
+        String sql = "UPDATE contract SET user_id=?, rateplan_id=?, msisdn=?, status=?::contract_status,"
+                + " credit_limit=?, available_credit=?, activation_date=?, billing_cycle_day=?"
+                + " WHERE id=?";
         try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, ct.getUserId());
             ps.setInt(2, ct.getRatePlanId());
@@ -78,7 +95,9 @@ public class ContractDAO {
             ps.setString(4, ct.getStatus());
             ps.setBigDecimal(5, ct.getCreditLimit());
             ps.setBigDecimal(6, ct.getAvailableCredit());
-            ps.setDate(7, ct.getActivationDate() != null ? Date.valueOf(ct.getActivationDate()) : Date.valueOf(java.time.LocalDate.now()));
+            ps.setDate(7, ct.getActivationDate() != null
+                    ? Date.valueOf(ct.getActivationDate())
+                    : Date.valueOf(java.time.LocalDate.now()));
             ps.setInt(8, ct.getBillingCycleDay());
             ps.setInt(9, ct.getId());
             ps.executeUpdate();

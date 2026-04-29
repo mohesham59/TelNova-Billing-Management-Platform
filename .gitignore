@@ -1,8 +1,18 @@
-/telecom-billing/target/
+/apps/telecom-billing/target/
 
-/TeleMeter/target/
+/apps/TeleMeter/target/
 *.class
 *.war
 *.jar
 .netbeans/
 nbproject/private/
+.idea/
+*.iml
+
+# Runtime artifacts
+/logs/
+/apps/TeleMeter/CDRs/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

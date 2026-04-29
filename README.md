@@ -60,9 +60,9 @@ CdrUploadServlet  ──►  CdrParser  ──►  PostgreSQL DB
 ```
 TeleMeter-Billing-Management-Platform/
 │
-├── Database/
+├── database/
 │   ├── docs/
-│   │   ├── ERD Diagram.jpg               # Entity-Relationship Diagram
+│   │   ├── ERD.png                       # Entity-Relationship Diagram
 │   │   └── billing_mapping.png           # Billing flow mapping
 │   ├── functions/
 │   │   ├── rating_engine.sql             # Core CDR rating logic
@@ -79,31 +79,40 @@ TeleMeter-Billing-Management-Platform/
 │   └── triggers/
 │       └── triggers.sql                  # PostgreSQL triggers
 │
-├── TeleMeter/
-│   ├── CDRs/                             # Incoming CDR files (pending processing)
-│   ├── CDRArchive/                       # Processed & archived CDR files
-│   ├── pom.xml                           # Maven build configuration
-│   └── src/main/
-│       ├── java/
-│       │   ├── com/telecom/
-│       │   │   ├── db/DBConnection.java         # PostgreSQL JDBC connection
-│       │   │   ├── model/cdrRecord.java          # CDR record model
-│       │   │   ├── model/Contract.java           # Subscriber contract model
-│       │   │   ├── model/Rateplan.java           # Rate plan model
-│       │   │   ├── parser/CdrParser.java         # CDR file parser & DB loader
-│       │   │   └── servlet/CdrUploadServlet.java # CDR upload HTTP endpoint
-│       │   └── com/a3m/billing/invoice/
-│       │       ├── InvoiceMain.java              # Invoice generation entry point
-│       │       ├── InvoiceData.java              # Invoice data model
-│       │       ├── InvoiceDataLoader.java        # Loads invoice data from DB
-│       │       └── InvoicePdfGenerator.java      # Generates PDF invoices
-│       ├── resources/META-INF/persistence.xml    # JPA persistence config
-│       └── webapp/
-│           ├── index.html                        # Web UI entry page
-│           ├── META-INF/context.xml              # Tomcat context / datasource
-│           └── WEB-INF/
-│               ├── web.xml                       # Servlet mappings
-│               └── beans.xml                     # CDI config
+├── apps/
+│   ├── TeleMeter/
+│   │   ├── CDRs/                         # Incoming CDR files (runtime; gitignored)
+│   │   ├── CDRArchive/                   # Processed CDR files (runtime; gitignored)
+│   │   ├── pom.xml                       # Maven build configuration
+│   │   └── src/main/
+│   │       ├── java/
+│   │       │   ├── com/telecom/
+│   │       │   │   ├── db/DBConnection.java         # PostgreSQL JDBC connection
+│   │       │   │   ├── model/cdrRecord.java          # CDR record model
+│   │       │   │   ├── model/Contract.java           # Subscriber contract model
+│   │       │   │   ├── model/Rateplan.java           # Rate plan model
+│   │       │   │   ├── parser/CdrParser.java         # CDR file parser & DB loader
+│   │       │   │   └── servlet/CdrUploadServlet.java # CDR upload HTTP endpoint
+│   │       │   └── com/a3m/billing/invoice/
+│   │       │       ├── InvoiceMain.java              # Invoice generation entry point
+│   │       │       ├── InvoiceData.java              # Invoice data model
+│   │       │       ├── InvoiceDataLoader.java        # Loads invoice data from DB
+│   │       │       └── InvoicePdfGenerator.java      # Generates PDF invoices
+│   │       ├── resources/META-INF/persistence.xml    # JPA persistence config
+│   │       └── webapp/
+│   │           ├── index.html                        # Web UI entry page
+│   │           ├── META-INF/context.xml              # Tomcat context / datasource
+│   │           └── WEB-INF/
+│   │               ├── web.xml                       # Servlet mappings
+│   │               └── beans.xml                     # CDI config
+│   │
+│   └── telecom-billing/
+│       ├── pom.xml                       # Alternative/legacy module (Maven)
+│       └── src/                          # Java source and web resources
+│
+├── logs/                                 # Runtime logs (gitignored)
+├── scripts/
+│   └── run_billing.sh                    # Local helper script
 │
 └── README.md
 ```
@@ -120,6 +129,28 @@ TeleMeter-Billing-Management-Platform/
 
 ---
 
+## 🚦 Quick Start (Fresh Clone)
+
+```bash
+# 1) Build the main app
+cd apps/TeleMeter
+mvn clean package
+
+# 2) (Optional) Run monthly billing job from repo root
+cd ../..
+chmod +x scripts/run_billing.sh
+./scripts/run_billing.sh
+```
+
+`scripts/run_billing.sh` auto-detects repository paths and `java`.  
+You can override them if needed:
+
+```bash
+PROJECT_DIR=/abs/path/to/repo/apps/TeleMeter JAVA=/usr/bin/java ./scripts/run_billing.sh
+```
+
+---
+
 ## 🗄️ Database Setup
 
 1. Create the database:
@@ -129,23 +160,23 @@ TeleMeter-Billing-Management-Platform/
 
 2. Run the scripts in this order:
    ```bash
-   psql -U postgres -d telemeter -f Database/schema/Database.sql
-   psql -U postgres -d telemeter -f Database/schema/Alterations.sql
-   psql -U postgres -d telemeter -f Database/seeds/rateplan.sql
-   psql -U postgres -d telemeter -f "Database/seeds/rateplan packages.sql"
-   psql -U postgres -d telemeter -f "Database/seeds/service packages.sql"
-   psql -U postgres -d telemeter -f Database/functions/rating_engine.sql
-   psql -U postgres -d telemeter -f Database/functions/generate_bill.sql
-   psql -U postgres -d telemeter -f Database/functions/bill_all_active_contracts.sql
-   psql -U postgres -d telemeter -f Database/functions/reset_billing_cycle.sql
-   psql -U postgres -d telemeter -f Database/triggers/triggers.sql
+   psql -U postgres -d telemeter -f database/schema/Database.sql
+   psql -U postgres -d telemeter -f database/schema/Alterations.sql
+   psql -U postgres -d telemeter -f database/seeds/rateplan.sql
+   psql -U postgres -d telemeter -f "database/seeds/rateplan packages.sql"
+   psql -U postgres -d telemeter -f "database/seeds/service packages.sql"
+   psql -U postgres -d telemeter -f database/functions/rating_engine.sql
+   psql -U postgres -d telemeter -f database/functions/generate_bill.sql
+   psql -U postgres -d telemeter -f database/functions/bill_all_active_contracts.sql
+   psql -U postgres -d telemeter -f database/functions/reset_billing_cycle.sql
+   psql -U postgres -d telemeter -f database/triggers/triggers.sql
    ```
 
 ---
 
 ## 🔧 Configuration
 
-Update the DB credentials in `src/main/java/com/telecom/db/DBConnection.java`:
+Update the DB credentials in `apps/TeleMeter/src/main/java/com/telecom/db/DBConnection.java`:
 
 ```java
 String url      = "jdbc:postgresql://localhost:5432/telemeter";
@@ -153,14 +184,14 @@ String user     = "your_postgres_user";
 String password = "your_postgres_password";
 ```
 
-If using a JNDI datasource with Tomcat, configure it in `src/main/webapp/META-INF/context.xml`.
+If using a JNDI datasource with Tomcat, configure it in `apps/TeleMeter/src/main/webapp/META-INF/context.xml`.
 
 ---
 
 ## 🚀 Build & Deploy
 
 ```bash
-cd TeleMeter
+cd apps/TeleMeter
 
 # Build the WAR
 mvn clean package
@@ -179,23 +210,23 @@ http://localhost:8080/Telemeter-one/
 ## 🔄 CDR Processing Flow
 
 ```
-1. Place CDR .txt files in  TeleMeter/CDRs/
+1. Place CDR .txt files in  apps/TeleMeter/CDRs/
 2. Upload via web UI        →  CdrUploadServlet  →  CdrParser  →  DB
 3. Rate CDRs                →  rating_engine() runs against active contracts
 4. Generate bills           →  bill_all_active_contracts()
 5. Export PDF invoices      →  InvoiceMain  →  InvoicePdfGenerator
-6. Archive processed CDRs   →  TeleMeter/CDRArchive/
+6. Archive processed CDRs   →  apps/TeleMeter/CDRArchive/
 ```
 
 ---
 
 ## 🗺️ Database Diagrams
 
-Visual documentation is available in `Database/docs/`:
+Visual documentation is available in `database/docs/`:
 
 | File | Description |
 |---|---|
-| `ERD Diagram.jpg` | Full entity-relationship diagram of all tables |
+| `ERD.png` | Full entity-relationship diagram of all tables |
 | `billing_mapping.png` | Billing data flow and rate mapping overview |
 
 ---

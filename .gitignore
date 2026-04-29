@@ -1,3 +1,5 @@
+/telecom-billing/target/
+
 /TeleMeter/target/
 *.class
 *.war

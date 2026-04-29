@@ -11,7 +11,8 @@ import java.sql.DriverManager;
  * @author mohesham
  */
 public class DBConnection {
-        private static final String URL = "jdbc:postgresql://ep-lucky-recipe-albakvk0-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require";    private static final String USER = "neondb_owner";
+        private static final String URL = "jdbc:postgresql://ep-lucky-recipe-albakvk0-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require";    
+        private static final String USER = "neondb_owner";
     private static final String PASSWORD = "npg_9bCGRsVIoLF1";
 
     public static Connection getConnection() {

@@ -1,0 +1,93 @@
+
+============================================
+  Billing run started: Tue 28 Apr 04:37:28 EEST 2026
+============================================
+============================================
+>> STEP 1: CDR Parsing Started
+Found 3 CDR file(s) to process.
+
+--- Processing: CDR20250418120000.txt ---
+File Name: CDR20250418120000.txt
+File Name Without Extension: CDR20250418120000
+File DateTime: 2025-04-18T12:00
+DB Connection success!
+>>> Starting to read file: CDR20250418120000.txt
+  [OK] CDR (1): 00201221234567,00201551234567,1,300,12:00:00,0
+  [OK] CDR (2): 00201111234567,http://www.youtube.com,3,1048576,12:05:00,30
+  [OK] CDR (3): 00201001234567,00201111234567,2,5,12:10:00,0
+  [OK] CDR (4): 00201551234567,http://www.google.com,3,307200,12:15:00,10
+  [OK] CDR (5): 00201221234567,00201001234567,1,90,12:20:00,0
+  [OK] CDR (6): 00201111234567,00201551234567,1,150,12:25:00,0
+  [OK] CDR (7): 00201001234567,http://www.youtube.com,3,2097152,12:30:00,50
+>>> Finished file: CDR20250418120000.txt
+    Total: 7 | Success: 7 | Failed: 0
+----------------------------------------
+File parsed successfully!
+File moved to archive: /home/mohesham/Desktop/ITI - Telecom/TeleMeter-Billing-Management-Platform/TeleMeter/CDRArchive/CDR20250418120000.txt
+
+--- Processing: CDR20250418180000.txt ---
+File Name: CDR20250418180000.txt
+File Name Without Extension: CDR20250418180000
+File DateTime: 2025-04-18T18:00
+DB Connection success!
+>>> Starting to read file: CDR20250418180000.txt
+  [OK] CDR (1): 00201551234567,00201221234567,1,200,18:00:00,0
+  [OK] CDR (2): 00201221234567,http://www.facebook.com,3,409600,18:05:00,25
+  [OK] CDR (3): 00201001234567,00201221234567,2,3,18:10:00,0
+  [OK] CDR (4): 00201111234567,http://www.google.com,3,153600,18:15:00,10
+  [OK] CDR (5): 00201551234567,00201111234567,1,360,18:20:00,0
+  [OK] CDR (6): 00201221234567,00201111234567,2,1,18:25:00,0
+  [OK] CDR (7): 00201001234567,00201551234567,1,420,18:30:00,0
+  [OK] CDR (8): 00201551234567,http://www.youtube.com,3,3145728,18:35:00,75
+>>> Finished file: CDR20250418180000.txt
+    Total: 8 | Success: 8 | Failed: 0
+----------------------------------------
+File parsed successfully!
+File moved to archive: /home/mohesham/Desktop/ITI - Telecom/TeleMeter-Billing-Management-Platform/TeleMeter/CDRArchive/CDR20250418180000.txt
+
+--- Processing: CDR20250419090000.txt ---
+File Name: CDR20250419090000.txt
+File Name Without Extension: CDR20250419090000
+File DateTime: 2025-04-19T09:00
+DB Connection success!
+>>> Starting to read file: CDR20250419090000.txt
+  [OK] CDR (1): 00201221234567,00201001234567,1,800,09:00:00,0
+  [OK] CDR (2): 00201221234567,00201111234567,1,500,09:15:00,0
+  [OK] CDR (3): 00201221234567,00201551234567,1,300,09:30:00,0
+  [OK] CDR (4): 00201001234567,00201221234567,1,900,09:45:00,0
+  [OK] CDR (5): 00201001234567,00201111234567,1,400,10:00:00,0
+  [OK] CDR (6): 00201111234567,00201221234567,2,10,10:15:00,0
+  [OK] CDR (7): 00201111234567,00201551234567,2,600,10:30:00,0
+  [OK] CDR (8): 00201551234567,http://www.google.com,3,15000000,10:45:00,0
+  [OK] CDR (9): 00201551234567,http://www.youtube.com,3,8000000,11:00:00,0
+>>> Finished file: CDR20250419090000.txt
+    Total: 9 | Success: 9 | Failed: 0
+----------------------------------------
+File parsed successfully!
+File moved to archive: /home/mohesham/Desktop/ITI - Telecom/TeleMeter-Billing-Management-Platform/TeleMeter/CDRArchive/CDR20250419090000.txt
+
+All CDR files processed!
+>> STEP 1: CDR Parsing Completed
+============================================
+>> STEP 2: BillingCycleJob Started
+=== TeleMeter Billing Cycle Job ===
+Started at: 2026-04-28T04:37:32.862606010
+Billing date: 2026-04-01
+
+[Step 1] Rating CDRs...
+[Step 1] Done.
+
+[Step 2] Generating bills...
+[Step 2] Done.
+
+[Step 3] Generating PDF invoices...
+         Found 0 unprocessed bill(s).
+[Step 3] Done. Success: 0  Failed: 0
+
+[Step 4] Resetting billing cycle...
+[Step 4] Done.
+
+=== Billing cycle completed successfully ===
+>> SUCCESS: Billing completed
+  Billing run finished: Tue 28 Apr 04:37:34 EEST 2026
+============================================

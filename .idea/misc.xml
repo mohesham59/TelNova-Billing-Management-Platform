@@ -4,7 +4,7 @@
   <component name="MavenProjectsManager">
     <option name="originalFiles">
       <list>
-        <option value="$PROJECT_DIR$/TeleMeter/pom.xml" />
+        <option value="$PROJECT_DIR$/apps/TeleMeter/pom.xml" />
       </list>
     </option>
   </component>

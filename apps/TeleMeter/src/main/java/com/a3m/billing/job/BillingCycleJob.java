@@ -33,7 +33,7 @@ import java.util.List;
  *   java -cp "target/classes:target/dependency/*" com.a3m.billing.job.BillingCycleJob
  *
  * Crontab (1st of every month at 00:30):
- *   30 0 1 * * /home/eissa/biilig_project/TeleMeter-Billing-Management-Platform/run_billing.sh
+ *   30 0 1 * * /home/eissa/biilig_project/TeleMeter-Billing-Management-Platform/scripts/run_billing.sh
  */
 public class BillingCycleJob {
 

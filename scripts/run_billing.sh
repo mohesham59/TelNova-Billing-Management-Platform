@@ -5,37 +5,25 @@
 # ================================================================
 #
 #  SETUP (do this once):
-#  1. Set PROJECT_DIR to the full path of your TeleMeter/ folder
-#  2. Set JAVA to the full path of your java binary
-#     Run: which java  — to find it
-#  3. Make this script executable:
-#     chmod +x run_billing.sh
-#  4. Test it manually:
-#     ./run_billing.sh
+#  1. Make this script executable:
+#     chmod +x scripts/run_billing.sh
+#  2. Test it manually:
+#     ./scripts/run_billing.sh
 #
 #  SCHEDULE WITH CRON (runs on 1st of every month at 00:30):
 #  Run: crontab -e
-#  Add: 30 0 1 * * /full/path/to/run_billing.sh
+#  Add: 30 0 1 * * /full/path/to/scripts/run_billing.sh
 #
 # ================================================================
 
-# ── EDIT THESE TWO LINES TO MATCH YOUR MACHINE ─────────────────
-PROJECT_DIR="/your/path/to/TeleMeter-Billing-Management-Platform/TeleMeter"
-JAVA="/your/path/to/jdk/bin/java"
-# ───────────────────────────────────────────────────────────────
-#
-# Examples:
-#   Linux:   PROJECT_DIR="/home/mohesham/Desktop/ITI - Telecom/TeleMeter-Billing-Management-Platform/TeleMeter"
-#            JAVA="/usr/bin/java"   # or wherever your java is — run: which java
-
-#   macOS:   PROJECT_DIR="/Users/youruser/TeleMeter-Billing-Management-Platform/TeleMeter"
-#            JAVA="/usr/bin/java"
-
-#   Windows: Use Git Bash or WSL and follow the Linux format above
-# ───────────────────────────────────────────────────────────────
-
-
-LOG_DIR="$PROJECT_DIR/../logs"
+# Optional overrides:
+#   PROJECT_DIR=/abs/path/to/repo/apps/TeleMeter ./scripts/run_billing.sh
+#   JAVA=/abs/path/to/java ./scripts/run_billing.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_DIR="${PROJECT_DIR:-$REPO_ROOT/apps/TeleMeter}"
+JAVA="${JAVA:-$(command -v java)}"
+LOG_DIR="$REPO_ROOT/logs"
 LOG_FILE="$LOG_DIR/billing_$(date +%Y%m).log"
 
 mkdir -p "$LOG_DIR"

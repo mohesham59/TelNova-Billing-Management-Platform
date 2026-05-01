@@ -1,12 +1,11 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.mycompany.telecom.billing.util;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Properties;
 
 /**
  *
@@ -14,15 +13,39 @@ import java.sql.SQLException;
  */
 public class DBConnection {
 
-    // Neon — all options (ssl, channelBinding) must live in the URL itself
-    private static final String URL
-            = "jdbc:postgresql://ep-lucky-recipe-albakvk0-pooler.c-3.eu-central-1.aws.neon.tech/neondb"
-            + "?user=neondb_owner"
-            + "&password=npg_9bCGRsVIoLF1"
-            + "&sslmode=require"
-            + "&channelBinding=require";
+    private static final String URL;
 
     static {
+        // Load credentials from db.properties (excluded from Git via .gitignore)
+        Properties props = new Properties();
+        try (InputStream in = DBConnection.class
+                .getClassLoader()
+                .getResourceAsStream("db.properties")) {
+
+            if (in == null) {
+                throw new RuntimeException(
+                        "db.properties not found on classpath. "
+                        + "Copy db.properties.example to db.properties and fill in your credentials.");
+            }
+            props.load(in);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load db.properties", e);
+        }
+
+        String host = props.getProperty("db.host");
+        String name = props.getProperty("db.name");
+        String user = props.getProperty("db.user");
+        String password = props.getProperty("db.password");
+        String sslmode = props.getProperty("db.sslmode", "require");
+        String channelBinding = props.getProperty("db.channelBinding", "require");
+
+        URL = "jdbc:postgresql://" + host + "/" + name
+                + "?user=" + user
+                + "&password=" + password
+                + "&sslmode=" + sslmode
+                + "&channelBinding=" + channelBinding;
+
         try {
             Class.forName("org.postgresql.Driver");
         } catch (ClassNotFoundException e) {

@@ -1,0 +1,22 @@
+# ── Credentials — NEVER commit these ──────────────────────────
+src/main/resources/db.properties
+ 
+# ── Build output ───────────────────────────────────────────────
+target/
+*.class
+*.war
+*.jar
+ 
+# ── IDE files ──────────────────────────────────────────────────
+.idea/
+*.iml
+nbproject/
+nb-configuration.xml
+.settings/
+.project
+.classpath
+.vscode/
+ 
+# ── OS files ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

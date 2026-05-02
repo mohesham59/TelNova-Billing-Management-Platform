@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package com.mycompany.telecom.billing.servlet;
 
 import com.mycompany.telecom.billing.dao.*;
@@ -24,48 +20,57 @@ import java.util.List;
 @WebServlet("/portal/home")
 public class PortalHomeServlet extends HttpServlet {
  
-    private final ContractDAO    contractDAO  = new ContractDAO();
-    private final RatePlanDAO    ratePlanDAO  = new RatePlanDAO();
-    private final ConsumptionDAO consumDAO    = new ConsumptionDAO();
-    private final BillDAO        billDAO      = new BillDAO();
+    private static final String EGP = "ج.م";
+ 
+    private final ContractDAO    contractDAO = new ContractDAO();
+    private final RatePlanDAO    ratePlanDAO = new RatePlanDAO();
+    private final ConsumptionDAO consumDAO   = new ConsumptionDAO();
+    private final BillDAO        billDAO     = new BillDAO();
  
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
  
-        HttpSession session  = req.getSession(false);
-        String userId        = (String) session.getAttribute("portalUserId");
-        String userName      = (String) session.getAttribute("portalUserName");
-        String userEmail     = (String) session.getAttribute("portalEmail");
-        String ctx           = req.getContextPath();
+        HttpSession session = req.getSession(false);
+        String userId   = (String) session.getAttribute("portalUserId");
+        String userName = (String) session.getAttribute("portalUserName");
+        String ctx      = req.getContextPath();
+ 
+        // Which tab is active?
+        String tab = req.getParameter("tab");
+        if (tab == null) tab = "overview";
  
         try {
-            List<Contract>  contracts = contractDAO.findByUserId(userId);
-            List<RatePlan>  allPlans  = ratePlanDAO.findAll();
+            List<Contract> contracts = contractDAO.findByUserId(userId);
+            List<RatePlan> allPlans  = ratePlanDAO.findAll();
+            List<BillSummary> allBills = billDAO.findAllByUserId(userId);
  
             resp.setContentType("text/html;charset=UTF-8");
             PrintWriter out = resp.getWriter();
  
-            renderPageHeader(out, userName, userEmail, ctx);
-            renderWelcomeBanner(out, userName, contracts.size());
+            renderHeader(out, userName, ctx, tab);
+            renderWelcomeBanner(out, userName, contracts.size(), allBills.size());
  
-            if (contracts.isEmpty()) {
-                renderNoContracts(out);
+            if ("invoices".equals(tab)) {
+                renderInvoicesTab(out, allBills, ctx);
+            } else if ("plans".equals(tab)) {
+                renderPlansTab(out, allPlans,
+                        contracts.stream().mapToInt(Contract::getRatePlanId).toArray());
             } else {
-                // ── For each contract render a full section ───────────────────
-                for (Contract ct : contracts) {
-                    List<ConsumptionView> consumption = consumDAO.findByContractId(ct.getId());
-                    List<BillSummary>     bills       = billDAO.findRecentByContractId(ct.getId());
-                    RatePlan              plan        = ratePlanDAO.findById(ct.getRatePlanId());
-                    renderContractSection(out, ct, plan, consumption, bills, ctx);
+                // Default: overview — show all contracts
+                if (contracts.isEmpty()) {
+                    renderNoContracts(out);
+                } else {
+                    for (Contract ct : contracts) {
+                        List<ConsumptionView> consumption = consumDAO.findByContractId(ct.getId());
+                        List<BillSummary>     bills       = billDAO.findRecentByContractId(ct.getId());
+                        RatePlan              plan        = ratePlanDAO.findById(ct.getRatePlanId());
+                        renderContractSection(out, ct, plan, consumption, bills, ctx);
+                    }
                 }
             }
  
-            // ── Available Rate Plans — shown once at the bottom ───────────────
-            renderAllPlans(out, allPlans,
-                    contracts.stream().mapToInt(Contract::getRatePlanId).toArray());
- 
-            renderPageFooter(out, ctx);
+            renderFooter(out);
  
         } catch (Exception e) {
             throw new ServletException(e);
@@ -73,209 +78,254 @@ public class PortalHomeServlet extends HttpServlet {
     }
  
     // ═══════════════════════════════════════════════════════════════════════════
-    // PAGE SHELL
+    // PAGE HEADER + CSS + NAV TABS
     // ═══════════════════════════════════════════════════════════════════════════
- 
-    private void renderPageHeader(PrintWriter out, String userName, String email, String ctx) {
+    private void renderHeader(PrintWriter out, String userName, String ctx, String activeTab) {
         out.print("""
             <!DOCTYPE html><html lang='en'><head>
             <meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
-            <title>My Account — TeleMeter</title>
+            <title>My Account — Telnova</title>
             <link href='https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap' rel='stylesheet'>
             <style>
             *{box-sizing:border-box;margin:0;padding:0}
             :root{
-              --bg:#0d1117;--sf:#161b22;--s2:#21262d;--bd:#30363d;
-              --green:#2ea44f;--blue:#58a6ff;--orange:#d29922;
-              --red:#f85149;--purple:#a371f7;
-              --text:#e6edf3;--muted:#8b949e;--r:12px;
+              --bg:#0a0e27;--sf:#1a1f3a;--s2:#1f2547;--bd:#2d3561;
+              --cyan:#00d4ff;--indigo:#6366f1;--green:#10b981;
+              --orange:#f59e0b;--red:#ef4444;--purple:#a78bfa;
+              --text:#e8eaf6;--muted:#9ca3af;--r:12px;
             }
             body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);}
  
             /* Topbar */
             .topbar{background:var(--sf);border-bottom:1px solid var(--bd);height:58px;
-                    padding:0 28px;display:flex;align-items:center;
-                    justify-content:space-between;position:sticky;top:0;z-index:100;}
-            .brand{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;}
-            .brand-icon{width:34px;height:34px;border-radius:9px;font-size:16px;
-              background:linear-gradient(135deg,var(--green),var(--blue));
-              display:flex;align-items:center;justify-content:center;}
+              padding:0 28px;display:flex;align-items:center;
+              justify-content:space-between;position:sticky;top:0;z-index:100;}
+            .brand{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;}
+            .brand svg{flex-shrink:0;}
+            .brand .tel{color:#fff;}
+            .brand .nova{background:linear-gradient(135deg,var(--cyan),var(--indigo));
+              -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
             .topbar-right{display:flex;align-items:center;gap:12px;}
             .user-chip{background:var(--s2);border:1px solid var(--bd);
               padding:5px 14px;border-radius:20px;font-size:13px;font-weight:500;}
             .signout{color:var(--red);text-decoration:none;font-size:13px;font-weight:500;
               padding:6px 12px;border-radius:7px;transition:background .15s;}
-            .signout:hover{background:rgba(248,81,73,.1);}
+            .signout:hover{background:rgba(239,68,68,.1);}
+ 
+            /* Tab nav */
+            .tab-bar{background:var(--sf);border-bottom:1px solid var(--bd);
+              padding:0 28px;display:flex;gap:4px;}
+            .tab-link{padding:14px 18px;font-size:13.5px;font-weight:500;
+              color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;
+              transition:all .15s;display:flex;align-items:center;gap:7px;}
+            .tab-link:hover{color:var(--text);}
+            .tab-link.active{color:var(--cyan);border-bottom-color:var(--cyan);font-weight:600;}
  
             /* Layout */
             .page{max-width:1080px;margin:0 auto;padding:28px 20px 60px;}
  
             /* Welcome banner */
-            .welcome{background:linear-gradient(135deg,rgba(46,164,79,.15),rgba(88,166,255,.1));
-              border:1px solid rgba(46,164,79,.25);border-radius:var(--r);
+            .welcome{background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(0,212,255,.08));
+              border:1px solid rgba(99,102,241,.25);border-radius:var(--r);
               padding:22px 26px;margin-bottom:28px;
               display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
-            .welcome-text h2{font-size:20px;font-weight:700;margin-bottom:4px;}
-            .welcome-text p{font-size:13.5px;color:var(--muted);}
-            .welcome-stats{display:flex;gap:20px;}
-            .ws-item{text-align:center;}
-            .ws-num{font-size:22px;font-weight:800;color:var(--blue);}
+            .welcome h2{font-size:20px;font-weight:700;margin-bottom:4px;}
+            .welcome p{font-size:13.5px;color:var(--muted);}
+            .welcome-stats{display:flex;gap:24px;}
+            .ws-num{font-size:22px;font-weight:800;color:var(--cyan);}
             .ws-lbl{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.5px;}
  
-            /* Section divider */
-            .sec-title{font-size:11.5px;font-weight:700;color:var(--muted);letter-spacing:1px;
+            /* Section label */
+            .sec{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;
               text-transform:uppercase;margin:32px 0 14px;
               display:flex;align-items:center;gap:10px;}
-            .sec-title::after{content:'';flex:1;height:1px;background:var(--bd);}
+            .sec::after{content:'';flex:1;height:1px;background:var(--bd);}
  
             /* Contract card */
-            .contract-card{background:var(--sf);border:1px solid var(--bd);
-              border-radius:var(--r);margin-bottom:24px;overflow:hidden;}
-            .contract-card-header{padding:16px 22px;background:var(--s2);
-              border-bottom:1px solid var(--bd);
-              display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
-            .contract-msisdn{font-size:17px;font-weight:700;letter-spacing:.5px;}
-            .contract-meta{font-size:12.5px;color:var(--muted);margin-top:3px;}
-            .contract-body{padding:20px;}
+            .ct-card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:24px;}
+            .ct-head{padding:16px 22px;background:var(--s2);border-bottom:1px solid var(--bd);
+              display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+              border-radius:var(--r) var(--r) 0 0;}
+            .ct-msisdn{font-size:17px;font-weight:700;}
+            .ct-meta{font-size:12.5px;color:var(--muted);margin-top:3px;}
+            .ct-body{padding:20px;}
  
             /* Info grid */
-            .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px;}
-            .info-item{background:var(--s2);border:1px solid var(--bd);border-radius:9px;padding:14px;}
-            .ii-label{font-size:10.5px;color:var(--muted);font-weight:600;
-              letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;}
-            .ii-value{font-size:17px;font-weight:700;}
+            .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:22px;}
+            .ii{background:var(--s2);border:1px solid var(--bd);border-radius:9px;padding:14px;}
+            .ii-lbl{font-size:10px;color:var(--muted);font-weight:700;
+              letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px;}
+            .ii-val{font-size:17px;font-weight:700;}
             .ii-sub{font-size:11.5px;color:var(--muted);margin-top:3px;}
  
-            /* Status badges */
+            /* Badges */
             .badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;
               border-radius:20px;font-size:12px;font-weight:600;}
-            .b-active   {background:rgba(46,164,79,.15); color:#3fb950;border:1px solid rgba(46,164,79,.3);}
-            .b-suspended{background:rgba(210,153,34,.15);color:#d29922;border:1px solid rgba(210,153,34,.3);}
-            .b-deactive {background:rgba(248,81,73,.15); color:#f85149;border:1px solid rgba(248,81,73,.3);}
-            .b-onhold   {background:rgba(139,148,158,.15);color:#8b949e;border:1px solid rgba(139,148,158,.3);}
+            .b-active   {background:rgba(16,185,129,.12);color:#10b981;border:1px solid rgba(16,185,129,.3);}
+            .b-suspended{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.3);}
+            .b-deactive {background:rgba(239,68,68,.12); color:#ef4444;border:1px solid rgba(239,68,68,.3);}
+            .b-onhold   {background:rgba(156,163,175,.12);color:#9ca3af;border:1px solid rgba(156,163,175,.3);}
  
-            /* Credit bar */
+            /* Progress bars */
+            .pg-wrap{margin-bottom:18px;}
+            .pg-wrap:last-child{margin-bottom:0;}
+            .pg-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
+            .pg-name{font-size:13.5px;font-weight:600;}
+            .pg-nums{font-size:12px;color:var(--muted);}
+            .pg-bg{height:9px;background:var(--s2);border-radius:99px;overflow:hidden;border:1px solid var(--bd);}
+            .pg-fill{height:100%;border-radius:99px;transition:width .6s ease;width:0;}
+            .fill-cyan   {background:linear-gradient(90deg,#00d4ff,#0ea5e9);}
+            .fill-indigo {background:linear-gradient(90deg,#6366f1,#8b5cf6);}
+            .fill-orange {background:linear-gradient(90deg,#f59e0b,#d97706);}
+            .fill-red    {background:linear-gradient(90deg,#ef4444,#dc2626);}
+            .pg-bot{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:5px;}
+ 
+            /* Credit */
             .credit-row{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:22px;}
-            .credit-numbers{min-width:160px;}
-            .credit-big{font-size:30px;font-weight:800;color:var(--blue);}
+            .credit-big{font-size:30px;font-weight:800;color:var(--cyan);}
             .credit-of{font-size:13px;color:var(--muted);margin-top:2px;}
-            .credit-pct-label{font-size:13px;font-weight:600;margin-top:6px;}
-            .credit-bar-wrap{flex:1;min-width:200px;}
-            .prog-bg{height:10px;background:var(--s2);border-radius:99px;
-              overflow:hidden;border:1px solid var(--bd);}
-            .prog-fill{height:100%;border-radius:99px;transition:width .6s ease;width:0;}
-            .fill-green {background:linear-gradient(90deg,#2ea44f,#3fb950);}
-            .fill-blue  {background:linear-gradient(90deg,#58a6ff,#1f6feb);}
-            .fill-orange{background:linear-gradient(90deg,#d29922,#bf8700);}
-            .fill-red   {background:linear-gradient(90deg,#f85149,#da3633);}
-            .fill-voice {background:linear-gradient(90deg,#a371f7,#7c5cbf);}
-            .fill-sms   {background:linear-gradient(90deg,#d29922,#bf8700);}
-            .prog-labels{display:flex;justify-content:space-between;
-              font-size:11.5px;color:var(--muted);margin-top:5px;}
- 
-            /* Usage progress bars */
-            .usage-section{margin-bottom:22px;}
-            .usage-title{font-size:13px;font-weight:700;color:var(--muted);
-              letter-spacing:.5px;text-transform:uppercase;margin-bottom:12px;}
-            .usage-item{margin-bottom:18px;}
-            .usage-item:last-child{margin-bottom:0;}
-            .usage-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
-            .usage-name{font-size:13.5px;font-weight:600;}
-            .usage-nums{font-size:12px;color:var(--muted);}
-            .usage-bot{display:flex;justify-content:space-between;
-              font-size:11.5px;color:var(--muted);margin-top:5px;}
-            .usage-empty{text-align:center;padding:28px;color:var(--muted);font-size:13.5px;}
+            .credit-pct{font-size:13px;font-weight:600;margin-top:6px;}
+            .credit-bar{flex:1;min-width:200px;}
+            .bar-labels{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:5px;}
  
             /* Bills table */
             .tbl-wrap{overflow-x:auto;margin-bottom:22px;}
-            .tbl{width:100%;border-collapse:collapse;font-size:13.5px;}
-            .tbl th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;
-              color:var(--muted);letter-spacing:.7px;text-transform:uppercase;
+            .tbl{width:100%;border-collapse:collapse;font-size:13px;}
+            .tbl th{padding:10px 14px;text-align:left;font-size:10.5px;font-weight:700;
+              color:var(--indigo);letter-spacing:.7px;text-transform:uppercase;
               background:var(--s2);border-bottom:1px solid var(--bd);}
-            .tbl td{padding:13px 14px;border-bottom:1px solid var(--bd);}
-            .tbl tbody tr:hover{background:rgba(255,255,255,.02);}
+            .tbl td{padding:12px 14px;border-bottom:1px solid var(--bd);}
+            .tbl tbody tr:hover{background:rgba(99,102,241,.04);}
             .tbl tbody tr:last-child td{border-bottom:none;}
-            .amount{color:#3fb950;font-weight:700;}
+            .amount{color:var(--green);font-weight:700;}
             .chip{background:var(--s2);border:1px solid var(--bd);
-              padding:3px 8px;border-radius:6px;font-size:12px;
-              display:inline-block;margin:1px 2px;}
+              padding:3px 8px;border-radius:6px;font-size:11.5px;display:inline-block;margin:1px 2px;}
  
-            /* Rate plan comparison */
+            /* Invoice download button */
+            .dl-btn{display:inline-flex;align-items:center;gap:5px;
+              padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;
+              background:linear-gradient(135deg,var(--indigo),var(--cyan));
+              color:#fff;text-decoration:none;transition:opacity .15s;}
+            .dl-btn:hover{opacity:.85;}
+ 
+            /* Invoices tab */
+            .inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+            .inv-card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:20px;
+              display:flex;flex-direction:column;gap:12px;}
+            .inv-head{display:flex;align-items:center;justify-content:space-between;}
+            .inv-id{font-size:15px;font-weight:700;}
+            .inv-period{font-size:12px;color:var(--muted);}
+            .inv-amount{font-size:24px;font-weight:800;color:var(--cyan);}
+            .inv-detail{font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;}
+ 
+            /* Plans grid */
             .plans-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;}
-            .plan-card{background:var(--sf);border:1px solid var(--bd);
-              border-radius:var(--r);padding:20px;transition:border-color .2s;}
-            .plan-card:hover{border-color:var(--blue);}
-            .plan-card.active-plan{border-color:var(--green);background:rgba(46,164,79,.04);}
-            .pc-tag{display:inline-block;background:rgba(46,164,79,.18);color:#3fb950;
-              border:1px solid rgba(46,164,79,.35);font-size:10px;font-weight:700;
-              padding:2px 8px;border-radius:20px;letter-spacing:.4px;margin-bottom:6px;}
+            .plan-card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);
+              padding:20px;transition:border-color .2s;}
+            .plan-card:hover{border-color:var(--cyan);}
+            .plan-card.mine{border-color:var(--green);background:rgba(16,185,129,.04);}
+            .mine-tag{display:inline-block;background:rgba(16,185,129,.15);color:#10b981;
+              border:1px solid rgba(16,185,129,.35);font-size:10px;font-weight:700;
+              padding:2px 9px;border-radius:20px;margin-bottom:6px;}
             .pc-name{font-size:15px;font-weight:700;margin-bottom:4px;}
-            .pc-fee{font-size:28px;font-weight:800;color:var(--blue);margin:10px 0 16px;}
+            .pc-fee{font-size:28px;font-weight:800;color:var(--cyan);margin:10px 0 16px;}
             .pc-fee span{font-size:13px;font-weight:500;color:var(--muted);}
             .pc-row{display:flex;justify-content:space-between;font-size:12.5px;
               padding:6px 0;border-bottom:1px solid var(--bd);}
             .pc-row:last-of-type{border-bottom:none;}
             .pc-lbl{color:var(--muted);}
  
-            /* No contracts */
-            .no-contracts{text-align:center;padding:60px 20px;color:var(--muted);}
-            .no-contracts .ni{font-size:48px;margin-bottom:14px;}
+            /* Empty */
+            .empty-state{text-align:center;padding:60px 20px;color:var(--muted);}
+            .empty-state .ei{font-size:48px;margin-bottom:14px;}
  
             @media(max-width:680px){
               .info-grid{grid-template-columns:1fr 1fr;}
               .credit-row{flex-direction:column;align-items:flex-start;}
               .welcome{flex-direction:column;}
+              .tab-link{padding:12px 12px;font-size:12.5px;}
             }
             </style></head><body>
             """);
  
+        // Topbar
         out.printf("""
             <div class='topbar'>
-              <div class='brand'><div class='brand-icon'>📡</div>TeleMeter</div>
+              <div class='brand'>
+                <svg viewBox='0 0 100 100' style='width:28px;height:28px;'>
+                  <defs><linearGradient id='g1' x1='0%%' y1='0%%' x2='100%%' y2='100%%'>
+                    <stop offset='0%%' stop-color='#00d4ff'/>
+                    <stop offset='100%%' stop-color='#6366f1'/>
+                  </linearGradient></defs>
+                  <path d='M 15 60 L 35 45 L 50 50 L 65 30 L 80 25 L 70 45 L 85 50 L 55 60 L 50 75 L 35 60 Z'
+                        fill='url(#g1)'/>
+                </svg>
+                <span><span class='tel'>Tel</span><span class='nova'>nova</span></span>
+              </div>
               <div class='topbar-right'>
                 <span class='user-chip'>👤 %s</span>
                 <a href='%s/portal/logout' class='signout'>Sign Out</a>
               </div>
             </div>
-            <div class='page'>
             """, e(userName), ctx);
+ 
+        // Tab bar
+        String baseUrl = ctx + "/portal/home";
+        out.printf("""
+            <div class='tab-bar'>
+              <a href='%s' class='tab-link %s'>📋 My Contracts</a>
+              <a href='%s?tab=invoices' class='tab-link %s'>🧾 Invoices</a>
+              <a href='%s?tab=plans' class='tab-link %s'>💳 Available Plans</a>
+            </div>
+            <div class='page'>
+            """,
+                baseUrl,       "overview".equals(activeTab) ? "active" : "",
+                baseUrl,       "invoices".equals(activeTab) ? "active" : "",
+                baseUrl,       "plans".equals(activeTab)    ? "active" : "");
     }
  
     // ── Welcome banner ────────────────────────────────────────────────────────
-    private void renderWelcomeBanner(PrintWriter out, String userName, int contractCount) {
+    private void renderWelcomeBanner(PrintWriter out, String userName,
+                                     int contractCount, int billCount) {
         out.printf("""
             <div class='welcome'>
-              <div class='welcome-text'>
+              <div>
                 <h2>Welcome back, %s 👋</h2>
-                <p>Here's a full overview of your account, usage, and billing.</p>
+                <p>Manage your Telnova account, usage, and invoices below.</p>
               </div>
               <div class='welcome-stats'>
-                <div class='ws-item'>
+                <div style='text-align:center;'>
                   <div class='ws-num'>%d</div>
                   <div class='ws-lbl'>Contract%s</div>
                 </div>
+                <div style='text-align:center;'>
+                  <div class='ws-num'>%d</div>
+                  <div class='ws-lbl'>Invoice%s</div>
+                </div>
               </div>
             </div>
-            """, e(userName), contractCount, contractCount != 1 ? "s" : "");
+            """, e(userName),
+                contractCount, contractCount != 1 ? "s" : "",
+                billCount,     billCount     != 1 ? "s" : "");
     }
  
     // ── No contracts ──────────────────────────────────────────────────────────
     private void renderNoContracts(PrintWriter out) {
         out.print("""
-            <div class='no-contracts'>
-              <div class='ni'>📋</div>
-              <p>You have no active contracts yet. Please contact support.</p>
+            <div class='empty-state'>
+              <div class='ei'>📋</div>
+              <p>You have no active contracts. Please contact Telnova support.</p>
             </div>
             """);
     }
  
     // ═══════════════════════════════════════════════════════════════════════════
-    // ONE CONTRACT SECTION
+    // TAB 1 — OVERVIEW: one section per contract
     // ═══════════════════════════════════════════════════════════════════════════
     private void renderContractSection(PrintWriter out, Contract ct, RatePlan plan,
             List<ConsumptionView> consumption, List<BillSummary> bills, String ctx) {
  
-        String statusBadge = switch (ct.getStatus()) {
+        String badge = switch (ct.getStatus()) {
             case "active"    -> "<span class='badge b-active'>● Active</span>";
             case "suspended" -> "<span class='badge b-suspended'>⏸ Suspended</span>";
             case "de-active" -> "<span class='badge b-deactive'>✕ De-active</span>";
@@ -283,106 +333,82 @@ public class PortalHomeServlet extends HttpServlet {
             default          -> e(ct.getStatus());
         };
  
-        // ── Contract card header ──────────────────────────────────────────────
         out.printf("""
-            <div class='contract-card'>
-              <div class='contract-card-header'>
+            <div class='ct-card'>
+              <div class='ct-head'>
                 <div>
-                  <div class='contract-msisdn'>📱 %s</div>
-                  <div class='contract-meta'>Contract #%d · %s</div>
+                  <div class='ct-msisdn'>📱 %s</div>
+                  <div class='ct-meta'>Contract #%d · %s</div>
                 </div>
                 %s
               </div>
-              <div class='contract-body'>
-            """, e(ct.getMsisdn()), ct.getId(), e(ct.getPlanName()), statusBadge);
+              <div class='ct-body'>
+            """, e(ct.getMsisdn()), ct.getId(), e(ct.getPlanName()), badge);
  
-        // ── 1. Account info grid ──────────────────────────────────────────────
+        // ── Info grid ─────────────────────────────────────────────────────────
         out.print("<div class='info-grid'>");
-        infoItem(out, "Rate Plan",      e(ct.getPlanName()), plan != null ? "$" + fmt(plan.getMonthlyFee()) + "/mo" : null);
-        infoItem(out, "Activated On",   e(ct.getActivationDate()), null);
-        infoItem(out, "Billing Day",    "Day " + ct.getBillingCycleDay(), "of each month");
-        infoItem(out, "Available Credit", "<span style='color:var(--blue);font-size:20px;font-weight:800;'>$" + fmt(ct.getAvailableCredit()) + "</span>", "of $" + fmt(ct.getCreditLimit()) + " limit");
+        ii(out, "Rate Plan",       e(ct.getPlanName()),
+                plan != null ? EGP + " " + fmt(plan.getMonthlyFee()) + "/mo" : null);
+        ii(out, "Activated On",    e(ct.getActivationDate()), null);
+        ii(out, "Billing Day",     "Day " + ct.getBillingCycleDay(), "of each month");
+        ii(out, "Available Credit",
+                "<span style='color:var(--cyan);font-weight:800;'>" + EGP + " " + fmt(ct.getAvailableCredit()) + "</span>",
+                "of " + EGP + " " + fmt(ct.getCreditLimit()) + " limit");
         out.print("</div>");
  
-        // ── 2. Credit balance bar ─────────────────────────────────────────────
-        renderCreditBar(out, ct);
- 
-        // ── 3. Current period usage ───────────────────────────────────────────
-        renderUsageBars(out, consumption);
- 
-        // ── 4. Recent bills ───────────────────────────────────────────────────
-        renderBills(out, bills);
- 
-        out.print("</div></div>"); // close contract-body + contract-card
-    }
- 
-    // ── Credit balance bar ────────────────────────────────────────────────────
-    private void renderCreditBar(PrintWriter out, Contract ct) {
+        // ── Credit gauge ──────────────────────────────────────────────────────
         BigDecimal avail = ct.getAvailableCredit() != null ? ct.getAvailableCredit() : BigDecimal.ZERO;
         BigDecimal limit = ct.getCreditLimit()     != null ? ct.getCreditLimit()     : BigDecimal.ZERO;
- 
-        int pct = 0;
+        int cpct = 0;
         if (limit.compareTo(BigDecimal.ZERO) > 0) {
-            pct = avail.multiply(BigDecimal.valueOf(100))
-                       .divide(limit, 0, RoundingMode.HALF_UP)
-                       .intValue();
-            pct = Math.min(pct, 100);
+            cpct = Math.min(avail.multiply(BigDecimal.valueOf(100))
+                    .divide(limit, 0, RoundingMode.HALF_UP).intValue(), 100);
         }
- 
-        String fillCls  = pct < 20 ? "fill-red" : pct < 50 ? "fill-orange" : "fill-green";
-        String pctColor = pct < 20 ? "var(--red)" : pct < 50 ? "var(--orange)" : "var(--green)";
+        String cfill  = cpct < 20 ? "fill-red" : cpct < 50 ? "fill-orange" : "fill-cyan";
+        String ccolor = cpct < 20 ? "var(--red)" : cpct < 50 ? "var(--orange)" : "var(--cyan)";
  
         out.printf("""
             <div class='credit-row'>
-              <div class='credit-numbers'>
-                <div class='credit-big'>$%s</div>
-                <div class='credit-of'>available of $%s limit</div>
-                <div class='credit-pct-label' style='color:%s;'>%d%% remaining</div>
+              <div>
+                <div class='credit-big'>%s %s</div>
+                <div class='credit-of'>available of %s %s limit</div>
+                <div class='credit-pct' style='color:%s;'>%d%% remaining</div>
               </div>
-              <div class='credit-bar-wrap'>
-                <div class='prog-bg'>
-                  <div class='prog-fill %s' data-width='%d' style='height:10px;'></div>
+              <div class='credit-bar'>
+                <div class='pg-bg' style='height:10px;'>
+                  <div class='pg-fill %s' data-width='%d' style='height:10px;'></div>
                 </div>
-                <div class='prog-labels'><span>$0</span><span>$%s</span></div>
+                <div class='bar-labels'><span>%s 0</span><span>%s %s</span></div>
               </div>
             </div>
-            """, fmt(avail), fmt(limit), pctColor, pct, fillCls, pct, fmt(limit));
-    }
+            """, EGP, fmt(avail), EGP, fmt(limit), ccolor, cpct,
+                cfill, cpct, EGP, EGP, fmt(limit));
  
-    // ── Usage progress bars ───────────────────────────────────────────────────
-    private void renderUsageBars(PrintWriter out, List<ConsumptionView> consumption) {
-        out.print("<div class='usage-section'>");
-        out.print("<div class='usage-title'>📊 Current Period Usage</div>");
- 
+        // ── Usage bars ────────────────────────────────────────────────────────
+        out.print("<div style='margin-bottom:8px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;'>📊 Current Period Usage</div>");
         if (consumption.isEmpty()) {
-            out.print("<div class='usage-empty'>No usage recorded for this billing period yet.</div>");
+            out.print("<div style='text-align:center;padding:24px;color:var(--muted);font-size:13.5px;'>No usage recorded this period yet.</div>");
         } else {
             for (ConsumptionView cv : consumption) {
                 int pct = cv.getPercentage();
                 String icon = switch (cv.getServiceType()) {
-                    case "voice" -> "🎙";
-                    case "data"  -> "📶";
-                    case "sms"   -> "💬";
-                    default      -> "📦";
+                    case "voice" -> "🎙"; case "data" -> "📶"; case "sms" -> "💬"; default -> "📦";
                 };
-                String fillCls = pct >= 90 ? "fill-red"
+                String fill = pct >= 90 ? "fill-red"
                         : switch (cv.getServiceType()) {
-                            case "voice" -> "fill-voice";
-                            case "data"  -> "fill-blue";
-                            case "sms"   -> "fill-sms";
-                            default      -> "fill-blue";
+                            case "voice" -> "fill-indigo";
+                            case "data"  -> "fill-cyan";
+                            case "sms"   -> "fill-orange";
+                            default      -> "fill-cyan";
                         };
- 
                 out.printf("""
-                    <div class='usage-item'>
-                      <div class='usage-top'>
-                        <span class='usage-name'>%s %s</span>
-                        <span class='usage-nums'>%s / %s %s &nbsp;·&nbsp; <strong>%d%%</strong> used</span>
+                    <div class='pg-wrap'>
+                      <div class='pg-top'>
+                        <span class='pg-name'>%s %s</span>
+                        <span class='pg-nums'>%s / %s %s &nbsp;·&nbsp; <strong>%d%%</strong> used</span>
                       </div>
-                      <div class='prog-bg'>
-                        <div class='prog-fill %s' data-width='%d'></div>
-                      </div>
-                      <div class='usage-bot'>
+                      <div class='pg-bg'><div class='pg-fill %s' data-width='%d'></div></div>
+                      <div class='pg-bot'>
                         <span>%s %s remaining</span>
                         <span>Since %s</span>
                       </div>
@@ -390,117 +416,146 @@ public class PortalHomeServlet extends HttpServlet {
                     """,
                         icon, e(cv.getPackageName()),
                         fmt(cv.getConsumed()), fmt(cv.getTotalQuota()), cv.getUnit(),
-                        pct, fillCls, pct,
+                        pct, fill, pct,
                         fmt(cv.getRemaining()), cv.getUnit(),
                         cv.getStartingDate() != null ? cv.getStartingDate() : "—");
             }
         }
-        out.print("</div>"); // usage-section
+ 
+        // ── Recent bills for this contract ────────────────────────────────────
+        out.print("<div style='margin:20px 0 10px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;'>🧾 Recent Bills</div>");
+        if (bills.isEmpty()) {
+            out.print("<div style='text-align:center;padding:20px;color:var(--muted);font-size:13.5px;'>No bills yet.</div>");
+        } else {
+            out.print("<div class='tbl-wrap'><table class='tbl'><thead><tr><th>Period</th><th>Usage</th><th>Recurring</th><th>One-Time</th><th>Tax</th><th>Total</th><th>Invoice</th></tr></thead><tbody>");
+            for (BillSummary b : bills) {
+                String period = (b.getPeriodStart() != null && b.getPeriodEnd() != null)
+                        ? b.getPeriodStart() + " → " + b.getPeriodEnd()
+                        : (b.getBillingDate() != null ? b.getBillingDate().toString() : "—");
+                out.printf("""
+                    <tr>
+                      <td><div style='font-weight:600;'>%s</div>
+                          %s</td>
+                      <td>
+                        <span class='chip'>🎙 %s</span>
+                        <span class='chip'>📶 %d MB</span>
+                        <span class='chip'>💬 %d</span>
+                      </td>
+                      <td>%s %s</td>
+                      <td>%s %s</td>
+                      <td style='color:var(--muted);'>%s %s</td>
+                      <td class='amount'>%s %s</td>
+                      <td><a href='%s/portal/invoice/%d' class='dl-btn'>⬇ PDF</a></td>
+                    </tr>
+                    """,
+                        period,
+                        b.getBillingDate() != null
+                                ? "<div style='font-size:11px;color:var(--muted);'>Billed " + b.getBillingDate() + "</div>"
+                                : "",
+                        b.getVoiceFormatted(), b.getDataUsage(), b.getSmsUsage(),
+                        EGP, fmt(b.getRecurringFees()),
+                        EGP, fmt(b.getOneTimeFees()),
+                        EGP, fmt(b.getTaxes()),
+                        EGP, fmt(b.getTotalAmount()),
+                        ctx, b.getId());
+            }
+            out.print("</tbody></table></div>");
+        }
+ 
+        out.print("</div></div>"); // close ct-body + ct-card
     }
  
-    // ── Bills table ───────────────────────────────────────────────────────────
-    private void renderBills(PrintWriter out, List<BillSummary> bills) {
-        out.print("<div class='usage-title'>🧾 Recent Bills</div>");
+    // ═══════════════════════════════════════════════════════════════════════════
+    // TAB 2 — ALL INVOICES
+    // ═══════════════════════════════════════════════════════════════════════════
+    private void renderInvoicesTab(PrintWriter out, List<BillSummary> bills, String ctx) {
+        out.print("<div class='sec'>🧾 All Invoices</div>");
  
         if (bills.isEmpty()) {
-            out.print("<div class='usage-empty'>No bills generated yet.</div>");
+            out.print("""
+                <div class='empty-state'>
+                  <div class='ei'>🧾</div>
+                  <p>No invoices generated yet.</p>
+                </div>
+                """);
             return;
         }
  
-        out.print("""
-            <div class='tbl-wrap'>
-            <table class='tbl'>
-              <thead><tr>
-                <th>Period</th>
-                <th>Usage</th>
-                <th>Recurring</th>
-                <th>One-Time</th>
-                <th>Tax</th>
-                <th>Total</th>
-              </tr></thead><tbody>
-            """);
- 
+        out.print("<div class='inv-grid'>");
         for (BillSummary b : bills) {
             String period = (b.getPeriodStart() != null && b.getPeriodEnd() != null)
                     ? b.getPeriodStart() + " → " + b.getPeriodEnd()
                     : (b.getBillingDate() != null ? b.getBillingDate().toString() : "—");
  
             out.printf("""
-                <tr>
-                  <td>
-                    <div style='font-weight:600;'>%s</div>
-                    %s
-                  </td>
-                  <td>
-                    <span class='chip'>🎙 %s</span>
-                    <span class='chip'>📶 %d MB</span>
-                    <span class='chip'>💬 %d</span>
-                  </td>
-                  <td>$%s</td>
-                  <td>$%s</td>
-                  <td style='color:var(--muted);'>$%s</td>
-                  <td class='amount'>$%s</td>
-                </tr>
+                <div class='inv-card'>
+                  <div class='inv-head'>
+                    <div>
+                      <div class='inv-id'>Invoice #%d</div>
+                      <div class='inv-period'>%s</div>
+                    </div>
+                    <a href='%s/portal/invoice/%d' class='dl-btn'>⬇ Download PDF</a>
+                  </div>
+                  <div class='inv-amount'>%s %s</div>
+                  <div class='inv-detail'>
+                    <span>🎙 %s</span>
+                    <span>📶 %d MB</span>
+                    <span>💬 %d msg</span>
+                    <span>Tax: %s %s</span>
+                  </div>
+                  <div style='font-size:11.5px;color:var(--muted);'>
+                    Billed: %s
+                  </div>
+                </div>
                 """,
-                    period,
-                    b.getBillingDate() != null
-                            ? "<div style='font-size:11.5px;color:var(--muted);'>Billed " + b.getBillingDate() + "</div>"
-                            : "",
-                    b.getVoiceFormatted(),
-                    b.getDataUsage(),
-                    b.getSmsUsage(),
-                    fmt(b.getRecurringFees()),
-                    fmt(b.getOneTimeFees()),
-                    fmt(b.getTaxes()),
-                    fmt(b.getTotalAmount()));
+                    b.getId(), period,
+                    ctx, b.getId(),
+                    EGP, fmt(b.getTotalAmount()),
+                    b.getVoiceFormatted(), b.getDataUsage(), b.getSmsUsage(),
+                    EGP, fmt(b.getTaxes()),
+                    b.getBillingDate() != null ? b.getBillingDate() : "—");
         }
- 
-        out.print("</tbody></table></div>");
+        out.print("</div>");
     }
  
     // ═══════════════════════════════════════════════════════════════════════════
-    // AVAILABLE RATE PLANS (shown once at the bottom)
+    // TAB 3 — AVAILABLE PLANS
     // ═══════════════════════════════════════════════════════════════════════════
-    private void renderAllPlans(PrintWriter out, List<RatePlan> plans, int[] activePlanIds) {
-        out.print("<div class='sec-title'>💳 Available Rate Plans</div>");
+    private void renderPlansTab(PrintWriter out, List<RatePlan> plans, int[] activePlanIds) {
+        out.print("<div class='sec'>💳 Available Rate Plans</div>");
         out.print("<div class='plans-grid'>");
  
         for (RatePlan rp : plans) {
-            boolean isActive = false;
-            for (int id : activePlanIds) {
-                if (id == rp.getId()) { isActive = true; break; }
-            }
+            boolean mine = false;
+            for (int id : activePlanIds) if (id == rp.getId()) { mine = true; break; }
  
             out.printf("""
                 <div class='plan-card %s'>
                   %s
                   <div class='pc-name'>%s</div>
-                  <div class='pc-fee'>$%s<span>/month</span></div>
+                  <div class='pc-fee'>%s %s<span>/month</span></div>
                   <div class='pc-row'><span class='pc-lbl'>📶 Data ROR</span><span>%s%%</span></div>
                   <div class='pc-row'><span class='pc-lbl'>🎙 Voice ROR</span><span>%s%%</span></div>
                   <div class='pc-row'><span class='pc-lbl'>💬 SMS ROR</span><span>%s%%</span></div>
                 </div>
                 """,
-                    isActive ? "active-plan" : "",
-                    isActive ? "<div class='pc-tag'>✓ YOUR PLAN</div>" : "",
+                    mine ? "mine" : "",
+                    mine ? "<div class='mine-tag'>✓ YOUR PLAN</div>" : "",
                     e(rp.getPlanName()),
-                    fmt(rp.getMonthlyFee()),
-                    fmt(rp.getRorData()),
-                    fmt(rp.getRorVoice()),
-                    fmt(rp.getRorSms()));
+                    EGP, fmt(rp.getMonthlyFee()),
+                    fmt(rp.getRorData()), fmt(rp.getRorVoice()), fmt(rp.getRorSms()));
         }
- 
         out.print("</div>");
     }
  
     // ═══════════════════════════════════════════════════════════════════════════
-    // PAGE FOOTER
+    // FOOTER
     // ═══════════════════════════════════════════════════════════════════════════
-    private void renderPageFooter(PrintWriter out, String ctx) {
+    private void renderFooter(PrintWriter out) {
         out.print("""
             </div>
             <script>
-              document.querySelectorAll('.prog-fill').forEach(bar => {
+              document.querySelectorAll('.pg-fill').forEach(bar => {
                 const w = bar.getAttribute('data-width') || '0';
                 bar.style.width = '0';
                 requestAnimationFrame(() => setTimeout(() => bar.style.width = w + '%', 80));
@@ -511,22 +566,21 @@ public class PortalHomeServlet extends HttpServlet {
     }
  
     // ── Helpers ───────────────────────────────────────────────────────────────
-    private void infoItem(PrintWriter out, String label, String value, String sub) {
+    private void ii(PrintWriter out, String label, String value, String sub) {
         out.printf("""
-            <div class='info-item'>
-              <div class='ii-label'>%s</div>
-              <div class='ii-value'>%s</div>
+            <div class='ii'>
+              <div class='ii-lbl'>%s</div>
+              <div class='ii-val'>%s</div>
               %s
             </div>
-            """, label, value,
-                sub != null ? "<div class='ii-sub'>" + sub + "</div>" : "");
+            """, label, value, sub != null ? "<div class='ii-sub'>" + sub + "</div>" : "");
     }
  
     private String e(Object val) {
         if (val == null) return "—";
         return val.toString()
-                .replace("&", "&amp;").replace("<", "&lt;")
-                .replace(">", "&gt;").replace("\"", "&quot;");
+                .replace("&","&amp;").replace("<","&lt;")
+                .replace(">","&gt;").replace("\"","&quot;");
     }
  
     private String fmt(BigDecimal v) {

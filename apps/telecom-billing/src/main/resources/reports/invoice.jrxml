@@ -7,7 +7,7 @@
               pageWidth="595" pageHeight="842"
               columnWidth="535" leftMargin="30" rightMargin="30"
               topMargin="30" bottomMargin="30"
-              uuid="a1b2c3d4-0001-0002-0003-000000000001">
+              uuid="4220841d-bc6a-4ab5-a9cb-5342496990d7">
 
     <!-- Parameters passed from InvoiceServlet -->
     <parameter name="BILL_ID"         class="java.lang.Integer"/>
@@ -27,122 +27,189 @@
     <parameter name="DATA_USAGE"      class="java.lang.String"/>
     <parameter name="SMS_USAGE"       class="java.lang.String"/>
 
-    <!-- No data source needed — everything is in parameters -->
     <queryString><![CDATA[]]></queryString>
 
     <title>
-        <band height="820" splitType="Stretch">
+        <band height="782" splitType="Stretch">
 
             <!-- ── Header background ── -->
             <rectangle>
-                <reportElement x="0" y="0" width="535" height="100" backcolor="#0A0E27" forecolor="#0A0E27" uuid="r1"/>
+                <reportElement x="0" y="0" width="535" height="100"
+                               backcolor="#0A0E27" forecolor="#0A0E27"
+                               uuid="8ee00b9f-8aee-4b08-a63d-1d5b4345b358"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
-            <!-- Brand name -->
+            <!-- Brand: "Tel" -->
             <staticText>
-                <reportElement x="20" y="28" width="100" height="40" forecolor="#FFFFFF" uuid="s1"/>
+                <reportElement x="20" y="28" width="60" height="40"
+                               forecolor="#FFFFFF"
+                               uuid="cac8b546-8b21-4950-b4e4-bfb480450ee3"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="SansSerif" size="28" isBold="true"/>
                 </textElement>
                 <text><![CDATA[Tel]]></text>
             </staticText>
+
+            <!-- Brand: "nova" -->
             <staticText>
-                <reportElement x="80" y="28" width="120" height="40" forecolor="#00D4FF" uuid="s2"/>
+                <reportElement x="78" y="28" width="100" height="40"
+                               forecolor="#00D4FF"
+                               uuid="1424c780-9d50-458e-bbee-c0829f75e8a0"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="SansSerif" size="28" isBold="true"/>
                 </textElement>
                 <text><![CDATA[nova]]></text>
             </staticText>
 
-            <!-- INVOICE label -->
+            <!-- "INVOICE" label -->
             <staticText>
-                <reportElement x="380" y="15" width="155" height="22" forecolor="#9CA3AF" uuid="s3"/>
+                <reportElement x="380" y="14" width="155" height="20"
+                               forecolor="#9CA3AF"
+                               uuid="fee3ef71-e167-4fda-8334-efaad486cd52"/>
                 <textElement textAlignment="Right">
-                    <font fontName="SansSerif" size="11" isBold="false"/>
+                    <font fontName="SansSerif" size="11"/>
                 </textElement>
                 <text><![CDATA[INVOICE]]></text>
             </staticText>
+
             <!-- Bill number -->
             <textField>
-                <reportElement x="380" y="38" width="155" height="28" forecolor="#FFFFFF" uuid="tf1"/>
+                <reportElement x="380" y="36" width="155" height="28"
+                               forecolor="#FFFFFF"
+                               uuid="62b3de4b-3280-4a53-a841-fc4dea65124b"/>
                 <textElement textAlignment="Right">
                     <font fontName="SansSerif" size="18" isBold="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA["#" + $P{BILL_ID}]]></textFieldExpression>
             </textField>
+
             <!-- Billing date -->
             <textField>
-                <reportElement x="380" y="68" width="155" height="16" forecolor="#9CA3AF" uuid="tf2"/>
+                <reportElement x="380" y="66" width="155" height="16"
+                               forecolor="#9CA3AF"
+                               uuid="769b54d8-3bcb-48b0-836b-be7343513cc0"/>
                 <textElement textAlignment="Right">
                     <font fontName="SansSerif" size="10"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Date: " + $P{BILLING_DATE}]]></textFieldExpression>
             </textField>
 
-            <!-- ── Customer Info Section ── -->
+            <!-- ── Bill To label ── -->
             <staticText>
-                <reportElement x="0" y="118" width="200" height="14" forecolor="#6366F1" uuid="s4"/>
-                <textElement><font fontName="SansSerif" size="9" isBold="true"/></textElement>
+                <reportElement x="0" y="118" width="200" height="14"
+                               forecolor="#6366F1"
+                               uuid="fca0921f-c0bb-4b21-8559-870cf2bb6044"/>
+                <textElement>
+                    <font fontName="SansSerif" size="9" isBold="true"/>
+                </textElement>
                 <text><![CDATA[BILL TO]]></text>
             </staticText>
+
+            <!-- Customer name -->
             <textField>
-                <reportElement x="0" y="136" width="260" height="18" uuid="tf3"/>
-                <textElement><font fontName="SansSerif" size="13" isBold="true"/></textElement>
+                <reportElement x="0" y="136" width="260" height="18"
+                               uuid="b503b53a-dc1b-456e-8c34-2dfa0bf5dbda"/>
+                <textElement>
+                    <font fontName="SansSerif" size="13" isBold="true"/>
+                </textElement>
                 <textFieldExpression><![CDATA[$P{CUSTOMER_NAME}]]></textFieldExpression>
             </textField>
+
+            <!-- Customer email -->
             <textField>
-                <reportElement x="0" y="156" width="260" height="14" forecolor="#9CA3AF" uuid="tf4"/>
-                <textElement><font fontName="SansSerif" size="10"/></textElement>
+                <reportElement x="0" y="156" width="260" height="14"
+                               forecolor="#9CA3AF"
+                               uuid="26051a64-28eb-4ed1-b9d9-87fc984234a4"/>
+                <textElement>
+                    <font fontName="SansSerif" size="10"/>
+                </textElement>
                 <textFieldExpression><![CDATA[$P{CUSTOMER_EMAIL}]]></textFieldExpression>
             </textField>
+
+            <!-- MSISDN -->
             <textField>
-                <reportElement x="0" y="172" width="260" height="14" forecolor="#9CA3AF" uuid="tf5"/>
-                <textElement><font fontName="SansSerif" size="10"/></textElement>
+                <reportElement x="0" y="172" width="260" height="14"
+                               forecolor="#9CA3AF"
+                               uuid="7960bd39-16a8-4ec3-a6e9-f43acd306d88"/>
+                <textElement>
+                    <font fontName="SansSerif" size="10"/>
+                </textElement>
                 <textFieldExpression><![CDATA["MSISDN: " + $P{MSISDN}]]></textFieldExpression>
             </textField>
+
+            <!-- Plan name -->
             <textField>
-                <reportElement x="0" y="188" width="260" height="14" forecolor="#9CA3AF" uuid="tf6"/>
-                <textElement><font fontName="SansSerif" size="10"/></textElement>
+                <reportElement x="0" y="188" width="260" height="14"
+                               forecolor="#9CA3AF"
+                               uuid="a8df7040-4ba2-4df9-a659-dff09a9267dc"/>
+                <textElement>
+                    <font fontName="SansSerif" size="10"/>
+                </textElement>
                 <textFieldExpression><![CDATA["Rate Plan: " + $P{PLAN_NAME}]]></textFieldExpression>
             </textField>
 
-            <!-- ── Billing Period ── -->
+            <!-- ── Billing Period label ── -->
             <staticText>
-                <reportElement x="340" y="118" width="195" height="14" forecolor="#6366F1" uuid="s5"/>
-                <textElement textAlignment="Right"><font fontName="SansSerif" size="9" isBold="true"/></textElement>
+                <reportElement x="340" y="118" width="195" height="14"
+                               forecolor="#6366F1"
+                               uuid="78aa2341-c603-4506-8023-d6e3ff5cc0b7"/>
+                <textElement textAlignment="Right">
+                    <font fontName="SansSerif" size="9" isBold="true"/>
+                </textElement>
                 <text><![CDATA[BILLING PERIOD]]></text>
             </staticText>
+
+            <!-- Period dates -->
             <textField>
-                <reportElement x="340" y="136" width="195" height="16" uuid="tf7"/>
-                <textElement textAlignment="Right"><font fontName="SansSerif" size="11" isBold="true"/></textElement>
+                <reportElement x="340" y="136" width="195" height="16"
+                               uuid="a396d859-06b1-486e-b141-7986067cdaed"/>
+                <textElement textAlignment="Right">
+                    <font fontName="SansSerif" size="11" isBold="true"/>
+                </textElement>
                 <textFieldExpression><![CDATA[$P{PERIOD_START} + " → " + $P{PERIOD_END}]]></textFieldExpression>
             </textField>
 
             <!-- ── Divider ── -->
             <line>
-                <reportElement x="0" y="218" width="535" height="1" forecolor="#2D3561" uuid="l1"/>
+                <reportElement x="0" y="218" width="535" height="1"
+                               forecolor="#2D3561"
+                               uuid="4b0a9a14-ded5-4db8-9ab4-dbea21ecbd05"/>
             </line>
 
-            <!-- ── Usage Summary header ── -->
+            <!-- ── Usage Summary label ── -->
             <staticText>
-                <reportElement x="0" y="232" width="535" height="16" forecolor="#6366F1" uuid="s6"/>
-                <textElement><font fontName="SansSerif" size="9" isBold="true"/></textElement>
+                <reportElement x="0" y="232" width="535" height="16"
+                               forecolor="#6366F1"
+                               uuid="d950c409-8810-42d4-b963-af4c77fcefeb"/>
+                <textElement>
+                    <font fontName="SansSerif" size="9" isBold="true"/>
+                </textElement>
                 <text><![CDATA[USAGE SUMMARY]]></text>
             </staticText>
 
-            <!-- Usage row headers -->
+            <!-- Usage table header background -->
             <rectangle>
-                <reportElement x="0" y="252" width="535" height="26" backcolor="#1A1F3A" forecolor="#1A1F3A" uuid="r2"/>
+                <reportElement x="0" y="252" width="535" height="26"
+                               backcolor="#1A1F3A" forecolor="#1A1F3A"
+                               uuid="944de31e-fdbf-4ec3-8a2f-a8a5b1ea9e34"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
+
             <staticText>
-                <reportElement x="8" y="252" width="180" height="26" forecolor="#9CA3AF" uuid="s7"/>
-                <textElement verticalAlignment="Middle"><font fontName="SansSerif" size="10" isBold="true"/></textElement>
+                <reportElement x="8" y="252" width="180" height="26"
+                               forecolor="#9CA3AF"
+                               uuid="bca862e1-8204-4275-8d32-f9cfb2bb74bf"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="SansSerif" size="10" isBold="true"/>
+                </textElement>
                 <text><![CDATA[Service]]></text>
             </staticText>
+
             <staticText>
-                <reportElement x="400" y="252" width="135" height="26" forecolor="#9CA3AF" uuid="s8"/>
+                <reportElement x="400" y="252" width="135" height="26"
+                               forecolor="#9CA3AF"
+                               uuid="cdeadb98-c5f2-407b-8bee-e8a0d5fb5d9d"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="SansSerif" size="10" isBold="true"/>
                 </textElement>
@@ -151,161 +218,252 @@
 
             <!-- Voice row -->
             <staticText>
-                <reportElement x="8" y="282" width="180" height="22" uuid="s9"/>
-                <textElement verticalAlignment="Middle"><font fontName="SansSerif" size="10"/></textElement>
+                <reportElement x="8" y="282" width="180" height="22"
+                               uuid="462a7d13-7e68-47a2-828f-e303d7052ace"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="SansSerif" size="10"/>
+                </textElement>
                 <text><![CDATA[Voice Calls]]></text>
             </staticText>
             <textField>
-                <reportElement x="400" y="282" width="135" height="22" uuid="tf8"/>
+                <reportElement x="400" y="282" width="135" height="22"
+                               uuid="919319f7-781e-441e-b6df-6edf7877c7c9"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="SansSerif" size="10"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{VOICE_USAGE}]]></textFieldExpression>
             </textField>
-            <line><reportElement x="0" y="304" width="535" height="1" forecolor="#2D3561" uuid="l2"/></line>
+            <line>
+                <reportElement x="0" y="304" width="535" height="1"
+                               forecolor="#2D3561"
+                               uuid="77524e8e-1db5-458a-9e4f-5de80038f821"/>
+            </line>
 
             <!-- Data row -->
             <staticText>
-                <reportElement x="8" y="308" width="180" height="22" uuid="s10"/>
-                <textElement verticalAlignment="Middle"><font fontName="SansSerif" size="10"/></textElement>
+                <reportElement x="8" y="308" width="180" height="22"
+                               uuid="3acbb1af-8c40-4f0c-8d54-b11c2a4c752a"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="SansSerif" size="10"/>
+                </textElement>
                 <text><![CDATA[Mobile Data]]></text>
             </staticText>
             <textField>
-                <reportElement x="400" y="308" width="135" height="22" uuid="tf9"/>
+                <reportElement x="400" y="308" width="135" height="22"
+                               uuid="51fb00d2-ff1e-4a14-a161-90036fc2a1b8"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="SansSerif" size="10"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{DATA_USAGE} + " MB"]]></textFieldExpression>
             </textField>
-            <line><reportElement x="0" y="330" width="535" height="1" forecolor="#2D3561" uuid="l3"/></line>
+            <line>
+                <reportElement x="0" y="330" width="535" height="1"
+                               forecolor="#2D3561"
+                               uuid="69be0649-cabf-4be4-b0ae-04edff7bcae5"/>
+            </line>
 
             <!-- SMS row -->
             <staticText>
-                <reportElement x="8" y="334" width="180" height="22" uuid="s11"/>
-                <textElement verticalAlignment="Middle"><font fontName="SansSerif" size="10"/></textElement>
+                <reportElement x="8" y="334" width="180" height="22"
+                               uuid="926c27b9-11b9-422f-9878-c3a5466e5b15"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="SansSerif" size="10"/>
+                </textElement>
                 <text><![CDATA[SMS Messages]]></text>
             </staticText>
             <textField>
-                <reportElement x="400" y="334" width="135" height="22" uuid="tf10"/>
+                <reportElement x="400" y="334" width="135" height="22"
+                               uuid="be21b0da-9363-4bb2-8da1-ab8a1e8fef40"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="SansSerif" size="10"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{SMS_USAGE} + " msg"]]></textFieldExpression>
             </textField>
-            <line><reportElement x="0" y="356" width="535" height="1" forecolor="#2D3561" uuid="l4"/></line>
+            <line>
+                <reportElement x="0" y="356" width="535" height="1"
+                               forecolor="#2D3561"
+                               uuid="70b56935-fc89-489c-9857-7e59b4ed86bc"/>
+            </line>
 
-            <!-- ── Charges header ── -->
+            <!-- ── Charges Breakdown label ── -->
             <staticText>
-                <reportElement x="0" y="374" width="535" height="16" forecolor="#6366F1" uuid="s12"/>
-                <textElement><font fontName="SansSerif" size="9" isBold="true"/></textElement>
+                <reportElement x="0" y="374" width="535" height="16"
+                               forecolor="#6366F1"
+                               uuid="d3f2c1f6-ca73-4267-90ad-b04b07bb011c"/>
+                <textElement>
+                    <font fontName="SansSerif" size="9" isBold="true"/>
+                </textElement>
                 <text><![CDATA[CHARGES BREAKDOWN]]></text>
             </staticText>
 
-            <!-- Charges table header -->
+            <!-- Charges table header background -->
             <rectangle>
-                <reportElement x="0" y="394" width="535" height="26" backcolor="#1A1F3A" forecolor="#1A1F3A" uuid="r3"/>
+                <reportElement x="0" y="394" width="535" height="26"
+                               backcolor="#1A1F3A" forecolor="#1A1F3A"
+                               uuid="cc150276-25fd-4711-8961-43bd580c6e85"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
+
             <staticText>
-                <reportElement x="8" y="394" width="300" height="26" forecolor="#9CA3AF" uuid="s13"/>
-                <textElement verticalAlignment="Middle"><font fontName="SansSerif" size="10" isBold="true"/></textElement>
+                <reportElement x="8" y="394" width="300" height="26"
+                               forecolor="#9CA3AF"
+                               uuid="cc74e9b1-d84c-458f-9b0b-85444ec8b67f"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="SansSerif" size="10" isBold="true"/>
+                </textElement>
                 <text><![CDATA[Description]]></text>
             </staticText>
+
             <staticText>
-                <reportElement x="400" y="394" width="135" height="26" forecolor="#9CA3AF" uuid="s14"/>
+                <reportElement x="400" y="394" width="135" height="26"
+                               forecolor="#9CA3AF"
+                               uuid="0ba015c9-a848-4780-836b-495201e603cf"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="SansSerif" size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Amount (ج.م)]]></text>
+                <text><![CDATA[Amount (EGP)]]></text>
             </staticText>
 
-            <!-- Recurring -->
+            <!-- Recurring fees row -->
             <staticText>
-                <reportElement x="8" y="424" width="300" height="22" uuid="s15"/>
-                <textElement verticalAlignment="Middle"><font fontName="SansSerif" size="10"/></textElement>
+                <reportElement x="8" y="424" width="300" height="22"
+                               uuid="78ad5ccf-fb50-4abc-965a-cdc8ded52a71"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="SansSerif" size="10"/>
+                </textElement>
                 <text><![CDATA[Monthly Subscription Fee]]></text>
             </staticText>
             <textField>
-                <reportElement x="400" y="424" width="135" height="22" uuid="tf11"/>
+                <reportElement x="400" y="424" width="135" height="22"
+                               uuid="3205c8ed-a698-4240-978d-0abc5add9cb2"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="SansSerif" size="10"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{RECURRING_FEES}]]></textFieldExpression>
             </textField>
-            <line><reportElement x="0" y="446" width="535" height="1" forecolor="#2D3561" uuid="l5"/></line>
+            <line>
+                <reportElement x="0" y="446" width="535" height="1"
+                               forecolor="#2D3561"
+                               uuid="a5153f4f-4203-4f74-997f-87fe0f84b2f6"/>
+            </line>
 
-            <!-- One-time -->
+            <!-- One-time fees row -->
             <staticText>
-                <reportElement x="8" y="450" width="300" height="22" uuid="s16"/>
-                <textElement verticalAlignment="Middle"><font fontName="SansSerif" size="10"/></textElement>
+                <reportElement x="8" y="450" width="300" height="22"
+                               uuid="d49ff1a0-4aa5-4aca-aaec-11ab958ffb2e"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="SansSerif" size="10"/>
+                </textElement>
                 <text><![CDATA[One-Time Charges]]></text>
             </staticText>
             <textField>
-                <reportElement x="400" y="450" width="135" height="22" uuid="tf12"/>
+                <reportElement x="400" y="450" width="135" height="22"
+                               uuid="2a901102-6572-498f-831e-2d3990664596"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="SansSerif" size="10"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{ONE_TIME_FEES}]]></textFieldExpression>
             </textField>
-            <line><reportElement x="0" y="472" width="535" height="1" forecolor="#2D3561" uuid="l6"/></line>
+            <line>
+                <reportElement x="0" y="472" width="535" height="1"
+                               forecolor="#2D3561"
+                               uuid="46cda990-7086-4f2d-b7bd-fbd76433de1f"/>
+            </line>
 
-            <!-- Subtotal -->
+            <!-- Subtotal row -->
             <staticText>
-                <reportElement x="8" y="476" width="300" height="22" uuid="s17"/>
-                <textElement verticalAlignment="Middle"><font fontName="SansSerif" size="10"/></textElement>
+                <reportElement x="8" y="476" width="300" height="22"
+                               uuid="b9956c4d-02dc-4444-9b28-54fa6245a449"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="SansSerif" size="10"/>
+                </textElement>
                 <text><![CDATA[Subtotal]]></text>
             </staticText>
             <textField>
-                <reportElement x="400" y="476" width="135" height="22" uuid="tf13"/>
+                <reportElement x="400" y="476" width="135" height="22"
+                               uuid="b26a3a08-00e6-4656-9e4c-435d53385184"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="SansSerif" size="10"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{SUBTOTAL}]]></textFieldExpression>
             </textField>
-            <line><reportElement x="0" y="498" width="535" height="1" forecolor="#2D3561" uuid="l7"/></line>
+            <line>
+                <reportElement x="0" y="498" width="535" height="1"
+                               forecolor="#2D3561"
+                               uuid="3065eaae-9291-45f2-8d8d-c072d47f3c72"/>
+            </line>
 
-            <!-- Tax -->
+            <!-- Tax row -->
             <staticText>
-                <reportElement x="8" y="502" width="300" height="22" uuid="s18"/>
-                <textElement verticalAlignment="Middle"><font fontName="SansSerif" size="10"/></textElement>
+                <reportElement x="8" y="502" width="300" height="22"
+                               uuid="2fb3a9c9-3f79-4c06-a3cd-8763355e531e"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="SansSerif" size="10"/>
+                </textElement>
                 <text><![CDATA[Tax]]></text>
             </staticText>
             <textField>
-                <reportElement x="400" y="502" width="135" height="22" uuid="tf14"/>
+                <reportElement x="400" y="502" width="135" height="22"
+                               uuid="78644338-d0d4-47f4-b716-004ce65a8d8b"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="SansSerif" size="10"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{TAXES}]]></textFieldExpression>
             </textField>
 
-            <!-- ── Total box ── -->
+            <!-- ── Total Due box ── -->
             <rectangle>
-                <reportElement x="0" y="534" width="535" height="52" backcolor="#1A1F3A" forecolor="#1A1F3A" uuid="r4"/>
+                <reportElement x="0" y="534" width="535" height="52"
+                               backcolor="#1A1F3A" forecolor="#1A1F3A"
+                               uuid="00d6b360-9281-4ace-a219-e217d9564d6c"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
+
             <staticText>
-                <reportElement x="12" y="534" width="200" height="52" uuid="s19"/>
-                <textElement verticalAlignment="Middle"><font fontName="SansSerif" size="14" isBold="true"/></textElement>
+                <reportElement x="12" y="534" width="200" height="52"
+                               uuid="d7321985-b997-4dea-bbe6-8080fb1c7a71"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="SansSerif" size="14" isBold="true"/>
+                </textElement>
                 <text><![CDATA[TOTAL DUE]]></text>
             </staticText>
+
             <textField>
-                <reportElement x="310" y="534" width="225" height="52" forecolor="#00D4FF" uuid="tf15"/>
+                <reportElement x="280" y="534" width="255" height="52"
+                               forecolor="#00D4FF"
+                               uuid="00140d6d-7b41-49aa-b2e0-400f1aeecf9e"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="SansSerif" size="20" isBold="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA["ج.م " + $P{TOTAL_AMOUNT}]]></textFieldExpression>
+                <textFieldExpression><![CDATA["EGP " + $P{TOTAL_AMOUNT}]]></textFieldExpression>
             </textField>
 
-            <!-- ── Footer ── -->
-            <line><reportElement x="0" y="606" width="535" height="1" forecolor="#2D3561" uuid="l8"/></line>
+            <!-- ── Footer divider ── -->
+            <line>
+                <reportElement x="0" y="568" width="535" height="1"
+                               forecolor="#2D3561"
+                               uuid="40652035-b6e4-4f84-b948-f9fc95bb2c30"/>
+            </line>
+
+            <!-- Footer line 1 -->
             <staticText>
-                <reportElement x="0" y="614" width="535" height="14" forecolor="#6B7280" uuid="s20"/>
-                <textElement textAlignment="Center"><font fontName="SansSerif" size="9"/></textElement>
+                <reportElement x="0" y="576" width="535" height="14"
+                               forecolor="#6B7280"
+                               uuid="7c5293a8-cef4-42e9-b2dd-a88d81f9811b"/>
+                <textElement textAlignment="Center">
+                    <font fontName="SansSerif" size="9"/>
+                </textElement>
                 <text><![CDATA[Thank you for being a Telnova customer. For support, please contact support@telnova.eg]]></text>
             </staticText>
+
+            <!-- Footer line 2 -->
             <staticText>
-                <reportElement x="0" y="630" width="535" height="14" forecolor="#4B5563" uuid="s21"/>
-                <textElement textAlignment="Center"><font fontName="SansSerif" size="8"/></textElement>
+                <reportElement x="0" y="592" width="535" height="14"
+                               forecolor="#4B5563"
+                               uuid="2d5a4304-7be6-455d-a5aa-4d66b3d7a470"/>
+                <textElement textAlignment="Center">
+                    <font fontName="SansSerif" size="8"/>
+                </textElement>
                 <text><![CDATA[Telnova Telecommunications · Cairo, Egypt · www.telnova.eg]]></text>
             </staticText>
 

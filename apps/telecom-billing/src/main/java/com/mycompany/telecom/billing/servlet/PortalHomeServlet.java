@@ -13,14 +13,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 
-/**
- *
- * @author Ali
- */
 @WebServlet("/portal/home")
 public class PortalHomeServlet extends HttpServlet {
  
-    private static final String EGP = "ج.م";
+    private static final String EGP = "EGP";
  
     private final ContractDAO    contractDAO = new ContractDAO();
     private final RatePlanDAO    ratePlanDAO = new RatePlanDAO();
@@ -534,9 +530,9 @@ public class PortalHomeServlet extends HttpServlet {
                   %s
                   <div class='pc-name'>%s</div>
                   <div class='pc-fee'>%s %s<span>/month</span></div>
-                  <div class='pc-row'><span class='pc-lbl'>📶 Data ROR</span><span>%s%%</span></div>
-                  <div class='pc-row'><span class='pc-lbl'>🎙 Voice ROR</span><span>%s%%</span></div>
-                  <div class='pc-row'><span class='pc-lbl'>💬 SMS ROR</span><span>%s%%</span></div>
+                  <div class='pc-row'><span class='pc-lbl'>📶 Data ROR</span><span>%s pt</span></div>
+                  <div class='pc-row'><span class='pc-lbl'>🎙 Voice ROR</span><span>%s pt</span></div>
+                  <div class='pc-row'><span class='pc-lbl'>💬 SMS ROR</span><span>%s pt</span></div>
                 </div>
                 """,
                     mine ? "mine" : "",
@@ -588,3 +584,4 @@ public class PortalHomeServlet extends HttpServlet {
         return v.setScale(2, RoundingMode.HALF_UP).toPlainString();
     }
 }
+ 

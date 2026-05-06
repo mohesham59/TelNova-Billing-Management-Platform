@@ -1,6 +1,10 @@
 # 📡 TeleMeter — Telecom Billing Management Platform
 
-A **Java EE web application** for telecom billing automation. TeleMeter processes **Call Detail Records (CDRs)**, rates them against subscriber rate plans using a billing engine, generates PDF invoices, and manages the full billing cycle — backed by a **PostgreSQL** database with stored functions and triggers.
+A **Java web billing platform** with two deployable modules:
+- **`apps/TeleMeter`**: CDR ingestion, rating cycle orchestration, and invoice generation.
+- **`apps/telecom-billing`**: portal/admin flows for contracts, users, plans, and invoices.
+
+Both modules use a shared PostgreSQL data model and SQL billing logic under `database/`.
 
 ---
 
@@ -36,6 +40,7 @@ CdrUploadServlet  ──►  CdrParser  ──►  PostgreSQL DB
 - **CDR Archiving** — Processed CDR files are moved from `CDRs/` to `CDRArchive/` automatically
 - **Rate Plan Management** — Seeded rate plans and service packages configurable in the database
 - **Database Triggers** — Automated DB-level business logic via PostgreSQL triggers
+- **Portal/Admin Module** — Additional servlet-based module for contracts, customers, plans, and invoice operations
 
 ---
 
@@ -43,15 +48,15 @@ CdrUploadServlet  ──►  CdrParser  ──►  PostgreSQL DB
 
 | Layer | Technology |
 |---|---|
-| Language | Java (EE / Jakarta EE) |
-| Web Layer | Java Servlet (`CdrUploadServlet`) |
+| Language | Java 17 |
+| Web Layer | Java Servlets (multiple modules) |
 | Build Tool | Apache Maven |
-| Packaging | WAR (`Telemeter-one.war`) |
+| Packaging | WAR (`Telemeter-one.war`, `telnova.war`) |
 | Database | PostgreSQL |
 | DB Logic | PL/pgSQL (Functions & Triggers) |
-| PDF Generation | Java (`InvoicePdfGenerator`) |
+| PDF Generation | iText, JasperReports |
 | Persistence | JPA (`persistence.xml`) |
-| IDE | NetBeans |
+| IDE | NetBeans / IntelliJ IDEA |
 
 ---
 
@@ -121,22 +126,26 @@ TeleMeter-Billing-Management-Platform/
 
 ## ⚙️ Prerequisites
 
-- **Java JDK 11+**
+- **Java JDK 17+**
 - **Apache Maven 3.6+**
 - **PostgreSQL 13+**
 - A Java EE servlet container: **Apache Tomcat 9+** or **WildFly**
-- **NetBeans IDE** (recommended) or IntelliJ IDEA with Java EE support
+- **NetBeans IDE** (recommended) or IntelliJ IDEA
 
 ---
 
 ## 🚦 Quick Start (Fresh Clone)
 
 ```bash
-# 1) Build the main app
+# 1) Build TeleMeter module
 cd apps/TeleMeter
 mvn clean package
 
-# 2) (Optional) Run monthly billing job from repo root
+# 2) Build telecom-billing module
+cd ../telecom-billing
+mvn clean package
+
+# 3) (Optional) Run monthly billing job from repo root
 cd ../..
 chmod +x scripts/run_billing.sh
 ./scripts/run_billing.sh
@@ -191,18 +200,21 @@ If using a JNDI datasource with Tomcat, configure it in `apps/TeleMeter/src/main
 ## 🚀 Build & Deploy
 
 ```bash
+# Build TeleMeter
 cd apps/TeleMeter
-
-# Build the WAR
 mvn clean package
-
-# Deploy to Tomcat
 cp target/Telemeter-one.war /opt/tomcat/webapps/
+
+# Build telecom-billing
+cd ../telecom-billing
+mvn clean package
+cp target/telnova.war /opt/tomcat/webapps/
 ```
 
-Start Tomcat and navigate to:
+Start Tomcat and navigate to one of:
 ```
 http://localhost:8080/Telemeter-one/
+http://localhost:8080/telnova/
 ```
 
 ---

@@ -1,9 +1,5 @@
 package com.mycompany.telecom.billing.util;
 
-/**
- *
- * @author Ali
- */
 public class HtmlLayout {
 
     // ── Telnova SVG logo mark (falcon path from brand guide) ─────────────────
@@ -22,7 +18,7 @@ public class HtmlLayout {
         "<span style='background:linear-gradient(135deg,#00d4ff,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700;'>nova</span>";
 
     // ── Currency ───────────────────────────────────────────────────────────────
-    public static final String EGP = "ج.م";
+    public static final String EGP = "EGP";
 
     private static final String CSS = """
         :root{

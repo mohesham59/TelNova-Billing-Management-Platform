@@ -13,10 +13,6 @@ import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.util.List;
 
-/**
- *
- * @author Ali
- */
 @WebServlet("/rateplans/*")
 public class RatePlanServlet extends HttpServlet {
  
@@ -83,7 +79,7 @@ public class RatePlanServlet extends HttpServlet {
             out.print("""
                 <table><thead><tr>
                   <th>#</th><th>Plan Name</th><th>Monthly Fee</th>
-                  <th>ROR Data</th><th>ROR Voice</th><th>ROR SMS</th><th>Actions</th>
+                  <th>ROR Data (pt)</th><th>ROR Voice (pt)</th><th>ROR SMS (pt)</th><th>Actions</th>
                 </tr></thead><tbody>
                 """);
             for (RatePlan rp : plans) {
@@ -92,7 +88,7 @@ public class RatePlanServlet extends HttpServlet {
                       <td style='color:var(--muted);'>%d</td>
                       <td><strong>%s</strong></td>
                       <td><span style='color:var(--cyan);font-weight:600;'>%s %s</span></td>
-                      <td>%s%%</td><td>%s%%</td><td>%s%%</td>
+                      <td>%s pt</td><td>%s pt</td><td>%s pt</td>
                       <td><div style='display:flex;gap:6px;'>
                         <a href='%s/rateplans/edit/%d' class='btn btn-outline btn-sm'>✏️ Edit</a>
                         <a href='%s/rateplans/delete/%d' class='btn btn-danger btn-sm delete-link'>🗑️ Delete</a>
@@ -135,15 +131,15 @@ public class RatePlanServlet extends HttpServlet {
                       <input type='number' step='0.01' name='monthlyFee' value='%s' placeholder='0.00'>
                     </div>
                     <div class='form-group'>
-                      <label>ROR Data Rate (%%)</label>
+                      <label>ROR Data Rate (pt)</label>
                       <input type='number' step='0.01' name='rorData' value='%s' placeholder='0.00'>
                     </div>
                     <div class='form-group'>
-                      <label>ROR Voice Rate (%%)</label>
+                      <label>ROR Voice Rate (pt)</label>
                       <input type='number' step='0.01' name='rorVoice' value='%s' placeholder='0.00'>
                     </div>
                     <div class='form-group'>
-                      <label>ROR SMS Rate (%%)</label>
+                      <label>ROR SMS Rate (pt)</label>
                       <input type='number' step='0.01' name='rorSms' value='%s' placeholder='0.00'>
                     </div>
                   </div>

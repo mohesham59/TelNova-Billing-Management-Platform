@@ -13,15 +13,11 @@ import java.io.PrintWriter;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- *
- * @author Ali
- */
 @WebServlet("/users/*")
 public class UserServlet extends HttpServlet {
- 
+
     private final UserDAO dao = new UserDAO();
- 
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
@@ -39,27 +35,37 @@ public class UserServlet extends HttpServlet {
             } else resp.sendError(404);
         } catch (Exception e) { throw new ServletException(e); }
     }
- 
+
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
         String path = req.getPathInfo();
         try {
             User u = new User();
-            u.setId(req.getParameter("id"));
             u.setName(req.getParameter("name"));
             u.setAddress(req.getParameter("address"));
             u.setEmail(req.getParameter("email"));
             u.setPassword(req.getParameter("password"));
             String bd = req.getParameter("birthdate");
             if (bd != null && !bd.isBlank()) u.setBirthdate(LocalDate.parse(bd));
- 
-            if ("/new".equals(path))                            dao.insert(u);
-            else if (path != null && path.startsWith("/edit/")) dao.update(u);
+
+            if ("/new".equals(path)) {
+                // ── Auto-generate ID if blank, else use what admin typed ──
+                String rawId = req.getParameter("id");
+                if (rawId == null || rawId.isBlank()) {
+                    u.setId(dao.generateNextId()); // e.g. "CUST0005"
+                } else {
+                    u.setId(rawId.trim());
+                }
+                dao.insert(u);
+            } else if (path != null && path.startsWith("/edit/")) {
+                u.setId(path.substring(6));
+                dao.update(u);
+            }
             resp.sendRedirect(req.getContextPath() + "/users/?success=saved");
         } catch (Exception e) { throw new ServletException(e); }
     }
- 
+
     private void renderList(HttpServletRequest req, HttpServletResponse resp) throws Exception {
         List<User> users = dao.findAll();
         String ctx = req.getContextPath();
@@ -68,7 +74,7 @@ public class UserServlet extends HttpServlet {
         out.print(HtmlLayout.header("Customers", "users", ctx));
         out.print(HtmlLayout.toast(req.getParameter("success")));
         out.print(HtmlLayout.breadcrumb("Dashboard", ctx+"/dashboard", "Customers", null));
- 
+
         out.printf("""
             <div class='card'>
               <div class='card-header'>
@@ -76,7 +82,7 @@ public class UserServlet extends HttpServlet {
                 <a href='%s/users/new' class='btn btn-primary btn-sm'>＋ Add Customer</a>
               </div><div class='table-wrap'>
             """, users.size(), ctx);
- 
+
         if (users.isEmpty()) {
             out.print("<div class='empty'><div class='empty-icon'>👤</div><p>No customers yet.</p></div>");
         } else {
@@ -109,7 +115,7 @@ public class UserServlet extends HttpServlet {
         out.print("</div></div>");
         out.print(HtmlLayout.footer());
     }
- 
+
     private void renderForm(HttpServletRequest req, HttpServletResponse resp,
                             User u, boolean editing) throws Exception {
         String ctx    = req.getContextPath();
@@ -119,7 +125,7 @@ public class UserServlet extends HttpServlet {
         PrintWriter out = resp.getWriter();
         out.print(HtmlLayout.header(title, "users", ctx));
         out.print(HtmlLayout.breadcrumb("Dashboard",ctx+"/dashboard","Customers",ctx+"/users/",title,null));
- 
+
         out.printf("""
             <div class='card' style='max-width:760px;'>
               <div class='card-header'><span class='card-title'>%s %s</span></div>
@@ -127,8 +133,9 @@ public class UserServlet extends HttpServlet {
                 <form method='post' action='%s'>
                   <div class='form-grid'>
                     <div class='form-group'>
-                      <label>Customer ID *</label>
-                      <input type='text' name='id' value='%s' %s maxlength='14' placeholder='e.g. CUST0001' required>
+                      <label>Customer ID %s</label>
+                      <input type='text' name='id' value='%s' %s maxlength='14'
+                             placeholder='%s'>
                     </div>
                     <div class='form-group'>
                       <label>Full Name *</label>
@@ -161,7 +168,9 @@ public class UserServlet extends HttpServlet {
             </div>
             """,
                 editing ? "✏️" : "➕", title, action,
+                editing ? "(read-only)" : "(optional — auto-generated if blank)",
                 HtmlLayout.e(u.getId()), editing ? "readonly style='opacity:.6'" : "",
+                editing ? "" : "Leave blank to auto-generate",
                 HtmlLayout.e(u.getName()),
                 HtmlLayout.e(u.getEmail()),
                 editing ? "(leave blank to keep current)" : "*",
@@ -169,8 +178,7 @@ public class UserServlet extends HttpServlet {
                 editing ? "" : "required",
                 HtmlLayout.e(u.getBirthdate()),
                 HtmlLayout.e(u.getAddress()), ctx);
- 
+
         out.print(HtmlLayout.footer());
     }
 }
-

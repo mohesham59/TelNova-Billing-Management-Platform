@@ -1,5 +1,6 @@
 package com.mycompany.telecom.billing.servlet;
 
+import com.mycompany.telecom.billing.util.DBConnection;
 import com.mycompany.telecom.billing.util.HtmlLayout;
 
 import jakarta.servlet.annotation.WebServlet;
@@ -7,6 +8,10 @@ import jakarta.servlet.http.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 /**
  *
@@ -14,31 +19,65 @@ import java.io.PrintWriter;
  */
 @WebServlet("/login")
 public class LoginServlet extends HttpServlet {
- 
+
     private static final String ADMIN_USER = "admin";
     private static final String ADMIN_PASS = "admin123";
- 
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         HttpSession s = req.getSession(false);
         if (s != null && Boolean.TRUE.equals(s.getAttribute("loggedIn"))) {
-            resp.sendRedirect(req.getContextPath() + "/dashboard"); return;
+            resp.sendRedirect(req.getContextPath() + "/dashboard");
+            return;
         }
         render(resp, null);
     }
- 
+
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        if (ADMIN_USER.equals(req.getParameter("username"))
-                && ADMIN_PASS.equals(req.getParameter("password"))) {
+        String username = req.getParameter("username");
+        String password = req.getParameter("password");
+
+        // -------------------------------------------------------
+        // 1. Admin hardcoded check
+        // -------------------------------------------------------
+        if (ADMIN_USER.equals(username) && ADMIN_PASS.equals(password)) {
             HttpSession s = req.getSession(true);
             s.setAttribute("loggedIn", true);
+            s.setAttribute("role", "admin");
             resp.sendRedirect(req.getContextPath() + "/dashboard");
-        } else {
-            render(resp, "Invalid username or password.");
+            return;
+        }
+
+        // -------------------------------------------------------
+        // 2. DB check للـ customers (بيسرش بالـ email)
+        // -------------------------------------------------------
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(
+                 "SELECT id, name FROM users WHERE email = ? AND password = ?")) {
+
+            ps.setString(1, username);
+            ps.setString(2, password);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    HttpSession s = req.getSession(true);
+                    s.setAttribute("loggedIn", true);
+                    s.setAttribute("role", "customer");
+                    s.setAttribute("userId", rs.getString("id"));
+                    s.setAttribute("userName", rs.getString("name"));
+                    resp.sendRedirect(req.getContextPath() + "/dashboard");
+                } else {
+                    render(resp, "Invalid username or password.");
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            render(resp, "Database error: " + e.getMessage());
         }
     }
- 
+
     private void render(HttpServletResponse resp, String error) throws IOException {
         resp.setContentType("text/html;charset=UTF-8");
         PrintWriter out = resp.getWriter();
@@ -108,15 +147,15 @@ public class LoginServlet extends HttpServlet {
             out.print("<div class='err'>⚠️ " + HtmlLayout.e(error) + "</div>");
         out.print("""
               <form method='post'>
-                <div class='fg'><label>Username</label>
-                  <input type='text' name='username' placeholder='admin'
+                <div class='fg'><label>Username / Email</label>
+                  <input type='text' name='username' placeholder='admin or user@example.com'
                          autofocus autocomplete='username'></div>
                 <div class='fg'><label>Password</label>
                   <input type='password' name='password' placeholder='••••••••'
                          autocomplete='current-password'></div>
                 <button class='btn'>Sign In →</button>
               </form>
-              <p class='hint'>Default: <code>admin</code> / <code>admin123</code></p>
+              <p class='hint'>Admin: <code>admin</code> / <code>admin123</code></p>
               <p class='portal-link'>Customer? <a href='portal/login'>Go to My Account →</a></p>
             </div></body></html>
             """);

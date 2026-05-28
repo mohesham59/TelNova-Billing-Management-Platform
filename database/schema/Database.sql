@@ -17,7 +17,10 @@ CREATE TABLE users (
     id        VARCHAR(14) PRIMARY KEY,
     name      VARCHAR(255) NOT NULL,
     address   TEXT,
-    birthdate DATE
+    birthdate DATE,
+    email     VARCHAR(255) UNIQUE,
+    password  VARCHAR(255)
+    
 );
 
 -- -- ------------------------------------------------------------

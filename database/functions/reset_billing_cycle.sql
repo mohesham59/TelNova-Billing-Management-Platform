@@ -85,18 +85,18 @@ BEGIN
     -- --------------------------------------------------
     -- Step 2: Zero out ror_contract for active contracts
     -- --------------------------------------------------
-    UPDATE ror_contract
-    SET data  = 0,
-        voice = 0,
-        sms   = 0
-    WHERE contract_id IN (
-        SELECT id FROM contract WHERE status = 'active'
 
-    -- Restore available_credit to credit_limit for all active contracts
-    UPDATE contract
-    SET    available_credit = credit_limit
-    WHERE  status = 'active';
-    );
+	UPDATE ror_contract rc
+	SET    data  = 0,
+	       voice = 0,
+	       sms   = 0
+	WHERE rc.contract_id IN (
+	    SELECT id FROM contract WHERE status = 'active'
+	);
+	-- Restore available_credit to credit_limit for all active contracts
+	UPDATE contract
+	SET    available_credit = credit_limit
+	WHERE  status = 'active';
 
     -- --------------------------------------------------
     -- Log summary

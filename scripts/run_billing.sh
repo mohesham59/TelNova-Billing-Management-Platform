@@ -1,111 +1,52 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# ============================================================
+#  run_billing.sh  – TeleMeter Billing Cycle Runner
+#  Called by the billing-cron container (or manually).
+#  DB credentials come from environment variables.
+# ============================================================
+set -euo pipefail
 
-# ================================================================
-#  TeleMeter — Monthly Billing Cycle Script
-# ================================================================
-#
-#  SETUP (do this once):
-#  1. Make this script executable:
-#     chmod +x scripts/run_billing.sh
-#  2. Test it manually:
-#     ./scripts/run_billing.sh
-#
-#  SCHEDULE WITH CRON (runs on 1st of every month at 00:30):
-#  Run: crontab -e
-#  Add: 30 0 1 * * /full/path/to/scripts/run_billing.sh
-#
-# ================================================================
+# --- Config (read from Docker env or defaults) ---
+DB_HOST="${DB_HOST:-localhost}"
+DB_PORT="${DB_PORT:-5432}"
+DB_NAME="${DB_NAME:-telecom_billing}"
+DB_USER="${DB_USER:-telecom}"
+PGPASSWORD="${DB_PASSWORD:-telecom_pass}"
+export PGPASSWORD
 
-# Optional overrides:
-#   PROJECT_DIR=/abs/path/to/repo/apps/TeleMeter ./scripts/run_billing.sh
-#   JAVA=/abs/path/to/java ./scripts/run_billing.sh
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-PROJECT_DIR="${PROJECT_DIR:-$REPO_ROOT/apps/TeleMeter}"
-JAVA="${JAVA:-$(command -v java)}"
-LOG_DIR="$REPO_ROOT/logs"
-LOG_FILE="$LOG_DIR/billing_$(date +%Y%m).log"
+LOG_DIR="/logs"
+LOG_FILE="${LOG_DIR}/billing_$(date +'%Y%m').log"
+TIMESTAMP=$(date +'%Y-%m-%d %H:%M:%S')
 
-mkdir -p "$LOG_DIR"
+mkdir -p "${LOG_DIR}"
 
-echo "" >> "$LOG_FILE"
-echo "============================================" >> "$LOG_FILE"
-echo "  Billing run started: $(date)" >> "$LOG_FILE"
-echo "============================================" >> "$LOG_FILE"
-
-# ================================================================
-#  CHECK PROJECT DIR
-# ================================================================
-if [ ! -d "$PROJECT_DIR" ]; then
-    echo "ERROR: PROJECT_DIR not found: $PROJECT_DIR" >> "$LOG_FILE"
-    exit 1
-fi
-
-# ================================================================
-#  CHECK JAVA
-# ================================================================
-if [ ! -f "$JAVA" ]; then
-    echo "ERROR: Java not found: $JAVA" >> "$LOG_FILE"
-    exit 1
-fi
-
-# ================================================================
-#  MOVE TO PROJECT
-# ================================================================
-cd "$PROJECT_DIR" || {
-    echo "ERROR: Cannot cd into $PROJECT_DIR" >> "$LOG_FILE"
-    exit 1
+log() {
+    echo "[${TIMESTAMP}] $*" | tee -a "${LOG_FILE}"
 }
 
-# ================================================================
-#  COPY DEPENDENCIES (if needed)
-# ================================================================
-if [ ! -d "target/dependency" ]; then
-    echo ">> Copying dependencies..." >> "$LOG_FILE"
-    mvn dependency:copy-dependencies -q >> "$LOG_FILE" 2>&1
-fi
+log "=========================================="
+log "  Billing Cycle Started"
+log "=========================================="
+log "  DB: ${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 
-# ================================================================
-#  STEP 1 — PARSE CDR FILES
-# ================================================================
-echo "============================================" >> "$LOG_FILE"
-echo ">> STEP 1: CDR Parsing Started" >> "$LOG_FILE"
-
-"$JAVA" -cp "target/classes:target/dependency/*" \
-    com.telecom.parser.CdrParser >> "$LOG_FILE" 2>&1
-
-PARSE_EXIT=$?
-
-if [ $PARSE_EXIT -ne 0 ]; then
-    echo ">> FAILED: CDR Parsing failed" >> "$LOG_FILE"
-    echo ">> Billing aborted" >> "$LOG_FILE"
-    echo "============================================" >> "$LOG_FILE"
-    exit 1
-fi
-
-echo ">> STEP 1: CDR Parsing Completed" >> "$LOG_FILE"
-
-# ================================================================
-#  STEP 2 — BILLING ENGINE
-# ================================================================
-echo "============================================" >> "$LOG_FILE"
-echo ">> STEP 2: BillingCycleJob Started" >> "$LOG_FILE"
-
-"$JAVA" -cp "target/classes:target/dependency/*" \
-    com.a3m.billing.job.BillingCycleJob >> "$LOG_FILE" 2>&1
+# Run the billing stored procedure
+log "Calling bill_all_active_contracts()..."
+psql \
+    -h "${DB_HOST}" \
+    -p "${DB_PORT}" \
+    -U "${DB_USER}" \
+    -d "${DB_NAME}" \
+    -v ON_ERROR_STOP=1 \
+    -c "SELECT bill_all_active_contracts();" \
+    >> "${LOG_FILE}" 2>&1
 
 EXIT_CODE=$?
 
-# ================================================================
-#  RESULT
-# ================================================================
-if [ $EXIT_CODE -eq 0 ]; then
-    echo ">> SUCCESS: Billing completed" >> "$LOG_FILE"
+if [ "${EXIT_CODE}" -eq 0 ]; then
+    log "Billing cycle completed successfully."
 else
-    echo ">> FAILED (exit code: $EXIT_CODE)" >> "$LOG_FILE"
+    log "ERROR: Billing cycle failed with exit code ${EXIT_CODE}."
+    exit "${EXIT_CODE}"
 fi
 
-echo "  Billing run finished: $(date)" >> "$LOG_FILE"
-echo "============================================" >> "$LOG_FILE"
-
-exit $EXIT_CODE
+log "=========================================="

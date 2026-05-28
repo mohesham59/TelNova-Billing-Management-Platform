@@ -14,16 +14,32 @@ import java.util.List;
 public class ConsumptionDAO {
 
     /**
-     * Returns all active consumption rows for the given contract, joined with
-     * service_package to get name, type and total quota.
-     *
-     * @return
+     * Returns consumption rows for the CURRENT billing period only,
+     * joined with service_package to get name, type and total quota.
+     * starting_date is filtered to the first day of the current month.
      */
     public List<ConsumptionView> findByContractId(int contractId) throws SQLException {
         List<ConsumptionView> list = new ArrayList<>();
-        String sql = "SELECT sp.name AS pkg_name,sp.type::TEXT AS pkg_type,sp.amount AS total_quota,cc.consumption AS consumed,cc.starting_date FROM contract_consumption cc JOIN service_package sp ON sp.id=cc.service_package_id WHERE cc.contract_id=? ORDER BY sp.type,sp.priority";
-        try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+
+        String sql = """
+                SELECT
+                    sp.name        AS pkg_name,
+                    sp.type::TEXT  AS pkg_type,
+                    sp.amount      AS total_quota,
+                    cc.consumption AS consumed,
+                    cc.starting_date
+                FROM contract_consumption cc
+                JOIN service_package sp ON sp.id = cc.service_package_id
+                WHERE cc.contract_id  = ?
+                  AND cc.starting_date = date_trunc('month', CURRENT_DATE)::DATE
+                ORDER BY sp.type, sp.priority
+                """;
+
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
             ps.setInt(1, contractId);
+
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     ConsumptionView cv = new ConsumptionView();

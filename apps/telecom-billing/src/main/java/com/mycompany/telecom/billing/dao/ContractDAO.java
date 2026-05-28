@@ -7,10 +7,6 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- *
- * @author Ali
- */
 public class ContractDAO {
 
     private static final String SELECT_COLS
@@ -23,30 +19,25 @@ public class ContractDAO {
             + " JOIN users u ON u.id = c.user_id"
             + " JOIN rateplan r ON r.id = c.rateplan_id";
 
-    // ── Portal: all contracts for a logged-in user ────────────────────────────
     public List<Contract> findByUserId(String userId) throws SQLException {
         List<Contract> list = new ArrayList<>();
-        String sql = "SELECT " + SELECT_COLS + BASE_JOIN
-                + " WHERE c.user_id = ? ORDER BY c.id";
+        String sql = "SELECT " + SELECT_COLS + BASE_JOIN + " WHERE c.user_id = ? ORDER BY c.id";
         try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    list.add(map(rs));
-                }
+                while (rs.next()) list.add(map(rs));
             }
         }
         return list;
     }
 
-    // ── Admin CRUD ────────────────────────────────────────────────────────────
     public List<Contract> findAll() throws SQLException {
         List<Contract> list = new ArrayList<>();
         String sql = "SELECT " + SELECT_COLS + BASE_JOIN + " ORDER BY c.id";
-        try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                list.add(map(rs));
-            }
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) list.add(map(rs));
         }
         return list;
     }
@@ -100,11 +91,54 @@ public class ContractDAO {
         }
     }
 
+    // ── CASCADE DELETE: يمسح كل الـ related records بالترتيب الصح ──────────
     public void delete(int id) throws SQLException {
-        String sql = "DELETE FROM contract WHERE id = ?";
-        try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setInt(1, id);
-            ps.executeUpdate();
+        try (Connection c = DBConnection.getConnection()) {
+            c.setAutoCommit(false);
+            try {
+                // 1. امسح الـ invoices المرتبطة بالـ bills بتاعت الـ contract
+                try (PreparedStatement ps = c.prepareStatement(
+                        "DELETE FROM invoice WHERE bill_id IN (SELECT id FROM bill WHERE contract_id = ?)")) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+                // 2. امسح الـ bills
+                try (PreparedStatement ps = c.prepareStatement(
+                        "DELETE FROM bill WHERE contract_id = ?")) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+                // 3. امسح الـ contract_consumption
+                try (PreparedStatement ps = c.prepareStatement(
+                        "DELETE FROM contract_consumption WHERE contract_id = ?")) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+                // 4. امسح الـ ror_contract
+                try (PreparedStatement ps = c.prepareStatement(
+                        "DELETE FROM ror_contract WHERE contract_id = ?")) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+                // 5. امسح الـ contract_one_time لو موجود
+                try (PreparedStatement ps = c.prepareStatement(
+                        "DELETE FROM contract_one_time WHERE contract_id = ?")) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+                // 6. امسح الـ contract نفسه
+                try (PreparedStatement ps = c.prepareStatement(
+                        "DELETE FROM contract WHERE id = ?")) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+                c.commit();
+            } catch (SQLException e) {
+                c.rollback();
+                throw e;
+            } finally {
+                c.setAutoCommit(true);
+            }
         }
     }
 
@@ -118,9 +152,7 @@ public class ContractDAO {
         ct.setCreditLimit(rs.getBigDecimal("credit_limit"));
         ct.setAvailableCredit(rs.getBigDecimal("available_credit"));
         Date ad = rs.getDate("activation_date");
-        if (ad != null) {
-            ct.setActivationDate(ad.toLocalDate());
-        }
+        if (ad != null) ct.setActivationDate(ad.toLocalDate());
         ct.setBillingCycleDay(rs.getInt("billing_cycle_day"));
         ct.setUserName(rs.getString("user_name"));
         ct.setPlanName(rs.getString("plan_name"));

@@ -1,16 +1,12 @@
 package com.mycompany.telecom.billing.dao;
 
-import com.mycompany.telecom.billing.util.DBConnection;
 import com.mycompany.telecom.billing.model.User;
+import com.mycompany.telecom.billing.util.DBConnection;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- *
- * @author Ali
- */
 public class UserDAO {
 
     // ── Portal authentication ─────────────────────────────────────────────────
@@ -26,14 +22,25 @@ public class UserDAO {
         }
     }
 
+    // ── Auto-generate next ID (e.g. "5", "6", ...) ───────────────────────────
+    public String generateNextId() throws SQLException {
+        String sql = "SELECT COALESCE(MAX(CAST(id AS BIGINT)), 0) + 1 FROM users WHERE id ~ '^[0-9]+$'";
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) return String.valueOf(rs.getLong(1));
+        }
+        return "5";
+    }
+
     // ── Admin CRUD ────────────────────────────────────────────────────────────
     public List<User> findAll() throws SQLException {
         List<User> list = new ArrayList<>();
         String sql = "SELECT id, name, address, birthdate, email, password FROM users ORDER BY id";
-        try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                list.add(map(rs));
-            }
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) list.add(map(rs));
         }
         return list;
     }
@@ -63,10 +70,8 @@ public class UserDAO {
     }
 
     public void update(User u) throws SQLException {
-        // If password field was left blank on edit, keep the existing one
         if (u.getPassword() != null && !u.getPassword().isBlank()) {
-            String sql = "UPDATE users SET name=?, address=?, birthdate=?, email=?, password=?"
-                    + " WHERE id=?";
+            String sql = "UPDATE users SET name=?, address=?, birthdate=?, email=?, password=? WHERE id=?";
             try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
                 ps.setString(1, u.getName());
                 ps.setString(2, u.getAddress());
@@ -89,11 +94,72 @@ public class UserDAO {
         }
     }
 
+    // ── CASCADE DELETE: يمسح الـ contracts وكل المرتبط بيها الأول ───────────
     public void delete(String id) throws SQLException {
-        String sql = "DELETE FROM users WHERE id = ?";
-        try (Connection c = DBConnection.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setString(1, id);
-            ps.executeUpdate();
+        try (Connection c = DBConnection.getConnection()) {
+            c.setAutoCommit(false);
+            try {
+                // 1. invoices
+                try (PreparedStatement ps = c.prepareStatement("""
+                        DELETE FROM invoice WHERE bill_id IN (
+                            SELECT b.id FROM bill b
+                            JOIN contract ct ON b.contract_id = ct.id
+                            WHERE ct.user_id = ?
+                        )""")) {
+                    ps.setString(1, id);
+                    ps.executeUpdate();
+                }
+                // 2. bills
+                try (PreparedStatement ps = c.prepareStatement("""
+                        DELETE FROM bill WHERE contract_id IN (
+                            SELECT id FROM contract WHERE user_id = ?
+                        )""")) {
+                    ps.setString(1, id);
+                    ps.executeUpdate();
+                }
+                // 3. contract_consumption
+                try (PreparedStatement ps = c.prepareStatement("""
+                        DELETE FROM contract_consumption WHERE contract_id IN (
+                            SELECT id FROM contract WHERE user_id = ?
+                        )""")) {
+                    ps.setString(1, id);
+                    ps.executeUpdate();
+                }
+                // 4. ror_contract
+                try (PreparedStatement ps = c.prepareStatement("""
+                        DELETE FROM ror_contract WHERE contract_id IN (
+                            SELECT id FROM contract WHERE user_id = ?
+                        )""")) {
+                    ps.setString(1, id);
+                    ps.executeUpdate();
+                }
+                // 5. contract_one_time
+                try (PreparedStatement ps = c.prepareStatement("""
+                        DELETE FROM contract_one_time WHERE contract_id IN (
+                            SELECT id FROM contract WHERE user_id = ?
+                        )""")) {
+                    ps.setString(1, id);
+                    ps.executeUpdate();
+                }
+                // 6. contracts
+                try (PreparedStatement ps = c.prepareStatement(
+                        "DELETE FROM contract WHERE user_id = ?")) {
+                    ps.setString(1, id);
+                    ps.executeUpdate();
+                }
+                // 7. user
+                try (PreparedStatement ps = c.prepareStatement(
+                        "DELETE FROM users WHERE id = ?")) {
+                    ps.setString(1, id);
+                    ps.executeUpdate();
+                }
+                c.commit();
+            } catch (SQLException e) {
+                c.rollback();
+                throw e;
+            } finally {
+                c.setAutoCommit(true);
+            }
         }
     }
 
@@ -103,9 +169,7 @@ public class UserDAO {
         u.setName(rs.getString("name"));
         u.setAddress(rs.getString("address"));
         Date bd = rs.getDate("birthdate");
-        if (bd != null) {
-            u.setBirthdate(bd.toLocalDate());
-        }
+        if (bd != null) u.setBirthdate(bd.toLocalDate());
         u.setEmail(rs.getString("email"));
         u.setPassword(rs.getString("password"));
         return u;

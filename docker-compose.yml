@@ -1,0 +1,121 @@
+# ============================================================
+#  TeleMeter Billing Management Platform
+#  Services:
+#    - postgres       : shared database
+#    - telecom-billing: Admin/backend portal (telnova.war)
+#    - telemeter      : CDR parser + billing job (Telemeter-one.war)
+#    - billing-cron   : runs run_billing.sh on a schedule
+# ============================================================
+
+services:
+
+  # ----------------------------------------------------------
+  # 1. PostgreSQL Database
+  # ----------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: tbmp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-telecom_billing}
+      POSTGRES_USER:     ${POSTGRES_USER:-telecom}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-telecom_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Auto-run schema + seeds on first start (alphabetical order)
+      - ./database/schema/Database.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./database/schema/Alterations.sql:/docker-entrypoint-initdb.d/02_alterations.sql:ro
+      - ./database/functions/rating_engine.sql:/docker-entrypoint-initdb.d/03_rating_engine.sql:ro
+      - ./database/functions/generate_bill.sql:/docker-entrypoint-initdb.d/04_generate_bill.sql:ro
+      - ./database/functions/bill_all_active_contracts.sql:/docker-entrypoint-initdb.d/05_bill_all.sql:ro
+      - ./database/functions/reset_billing_cycle.sql:/docker-entrypoint-initdb.d/06_reset_cycle.sql:ro
+      - ./database/triggers/triggers.sql:/docker-entrypoint-initdb.d/07_triggers.sql:ro
+      - ./database/seeds/rateplan.sql:/docker-entrypoint-initdb.d/08_seed_rateplan.sql:ro
+      - "./database/seeds/service packages.sql:/docker-entrypoint-initdb.d/09_seed_svc_pkgs.sql:ro"
+      - "./database/seeds/rateplan packages.sql:/docker-entrypoint-initdb.d/10_seed_rateplan_pkgs.sql:ro"
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-telecom} -d ${POSTGRES_DB:-telecom_billing}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------
+  # 2. Telecom Billing Portal  (telnova.war)
+  #    Admin UI: http://localhost:8080/telnova
+  # ----------------------------------------------------------
+  telecom-billing:
+    build:
+      context: .                                          # ROOT as context → all paths relative to project root
+      dockerfile: docker/telecom-billing/Dockerfile
+    container_name: tbmp-billing-portal
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST:     postgres
+      DB_PORT:     5432
+      DB_NAME:     ${POSTGRES_DB:-telecom_billing}
+      DB_USER:     ${POSTGRES_USER:-telecom}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-telecom_pass}
+    ports:
+      - "8080:8080"
+    volumes:
+      - billing_logs:/usr/local/tomcat/logs
+
+  # ----------------------------------------------------------
+  # 3. TeleMeter  (Telemeter-one.war)
+  #    CDR Parser + Billing Job: http://localhost:8081/Telemeter-one
+  # ----------------------------------------------------------
+  telemeter:
+    build:
+      context: .                                          # ROOT as context
+      dockerfile: docker/telemeter/Dockerfile
+    container_name: tbmp-telemeter
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST:     postgres
+      DB_PORT:     5432
+      DB_NAME:     ${POSTGRES_DB:-telecom_billing}
+      DB_USER:     ${POSTGRES_USER:-telecom}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-telecom_pass}
+      CDR_ARCHIVE_PATH: /app/CDRArchive
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./apps/TeleMeter/CDRArchive:/app/CDRArchive   # CDR files mount
+      - telemeter_logs:/usr/local/tomcat/logs
+
+  # ----------------------------------------------------------
+  # 4. Billing Cron  (runs run_billing.sh periodically)
+  #    Runs every day at 01:00 AM by default
+  # ----------------------------------------------------------
+  billing-cron:
+    build:
+      context: .
+      dockerfile: docker/billing-cron/Dockerfile
+    container_name: tbmp-billing-cron
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST:     postgres
+      DB_PORT:     5432
+      DB_NAME:     ${POSTGRES_DB:-telecom_billing}
+      DB_USER:     ${POSTGRES_USER:-telecom}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-telecom_pass}
+      BILLING_CRON: ${BILLING_CRON:-0 1 * * *}   # override in .env
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./logs:/logs
+
+volumes:
+  postgres_data:
+  billing_logs:
+  telemeter_logs:

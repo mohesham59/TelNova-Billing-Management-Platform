@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context>
+
+    <!-- JNDI DataSource – PostgreSQL -->
+    <Resource
+        name="jdbc/TelecomDB"
+        auth="Container"
+        type="javax.sql.DataSource"
+        driverClassName="org.postgresql.Driver"
+        url="jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
+        username="${DB_USER}"
+        password="${DB_PASSWORD}"
+        maxTotal="20"
+        maxIdle="10"
+        maxWaitMillis="10000"
+        validationQuery="SELECT 1"
+        testOnBorrow="true"
+    />
+
+    <!-- CDR Archive path passed to the app -->
+    <Environment
+        name="cdrArchivePath"
+        type="java.lang.String"
+        value="${CDR_ARCHIVE_PATH:/app/CDRArchive}"
+    />
+
+</Context>

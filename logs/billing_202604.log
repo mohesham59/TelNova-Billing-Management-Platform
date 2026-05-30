@@ -91,3 +91,15 @@ Billing date: 2026-04-01
 >> SUCCESS: Billing completed
   Billing run finished: Tue 28 Apr 04:37:34 EEST 2026
 ============================================
+
+============================================
+  Billing run started: Thu 30 Apr 00:53:09 EEST 2026
+============================================
+>> Copying dependencies...
+============================================
+>> STEP 1: CDR Parsing Started
+Error: Could not find or load main class com.telecom.parser.CdrParser
+Caused by: java.lang.ClassNotFoundException: com.telecom.parser.CdrParser
+>> FAILED: CDR Parsing failed
+>> Billing aborted
+============================================

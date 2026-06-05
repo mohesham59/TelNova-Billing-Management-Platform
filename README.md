@@ -1,4 +1,4 @@
-# 📡 TeleMeter — Telecom Billing Management Platform
+# 📡 TelNova — Telecom Billing Management Platform
 
 A **Java web billing platform** with two deployable modules:
 - **`apps/TeleMeter`**: CDR ingestion, rating cycle orchestration, and invoice generation.

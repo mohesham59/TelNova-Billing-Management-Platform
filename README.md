@@ -1,7 +1,7 @@
 # 📡 TelNova — Telecom Billing Management Platform
 
 A **Java web billing platform** with two deployable modules:
-- **`apps/TeleMeter`**: CDR ingestion, rating cycle orchestration, and invoice generation.
+- **`apps/TelNova`**: CDR ingestion, rating cycle orchestration, and invoice generation.
 - **`apps/telecom-billing`**: portal/admin flows for contracts, users, plans, and invoices.
 
 Both modules use a shared PostgreSQL data model and SQL billing logic under `database/`.
@@ -26,6 +26,12 @@ CdrUploadServlet  ──►  CdrParser  ──►  PostgreSQL DB
                                              │
                                         PDF Invoice
 ```
+## 🔄 Billing System Project Flow
+
+<img width="1472" height="735" alt="image" src="https://github.com/user-attachments/assets/6f2f53d2-7cfc-4cf5-9ee9-92d8d128bdac" />
+
+<img width="984" height="694" alt="image" src="https://github.com/user-attachments/assets/3560afa5-e353-4329-99d8-2befe837dbbe" />
+
 
 ---
 
@@ -63,7 +69,7 @@ CdrUploadServlet  ──►  CdrParser  ──►  PostgreSQL DB
 ## 📁 Project Structure
 
 ```
-TeleMeter-Billing-Management-Platform/
+TelNova-Billing-Management-Platform/
 │
 ├── database/
 │   ├── docs/

@@ -26,13 +26,6 @@ CdrUploadServlet  ──►  CdrParser  ──►  PostgreSQL DB
                                              │
                                         PDF Invoice
 ```
-## 🔄 Billing System Project Flow
-
-<img width="1472" height="735" alt="image" src="https://github.com/user-attachments/assets/6f2f53d2-7cfc-4cf5-9ee9-92d8d128bdac" />
-
-<img width="984" height="694" alt="image" src="https://github.com/user-attachments/assets/3560afa5-e353-4329-99d8-2befe837dbbe" />
-
-
 ---
 
 ## ✨ Features
